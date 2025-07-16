@@ -1,0 +1,26 @@
+{
+  "routes": [
+    {
+      "route": "/api/*",
+      "rewrite": "https://KartkowkaFunc.azurewebsites.net/api/{*?}"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "statusCode": 200
+  },
+  "responseOverrides": {
+    "401": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    },
+    "403": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    },
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
+  }
+}
