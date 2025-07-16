@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import EditStudentDataModal from './EditStudentDataModal';
 import StudentProfileModal from './StudentProfileModal';
-import { User, Settings, BookOpen, Send, Loader, AlertTriangle } from 'lucide-react'; // Import AlertTriangle
+import { Settings, BookOpen, Send, Loader, AlertTriangle } from 'lucide-react'; // Import AlertTriangle
 
 // Definicja typów dla danych profilu (musi być zgodna z StudentProfileModal.tsx)
 interface StudentProfile {
