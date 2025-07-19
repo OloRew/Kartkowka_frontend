@@ -13,18 +13,17 @@ import reportWebVitals from './reportWebVitals';
 // ⚙️ Konfiguracja MSAL dla CIAM z user flow
 const msalConfig = {
   auth: {
-    clientId: '2eae489a-6d95-4325-a489-c7e762c88a6a',
-    // Zaktualizowany authority URL: Teraz pasuje do 'issuer' z metadanych (bez '/v2.0')
-    // Zauważ, że nie ma już /tfp/ ani nazwy przepływu użytkownika,
-    // ponieważ 'issuer' w metadanych ich nie zawiera.
-    authority:
-      'https://fa06aa37-1f0c-44ea-b4b0-2c97ea9bac8a.ciamlogin.com/fa06aa37-1f0c-44ea-b4b0-2c97ea9bac8a',
-    // Zaktualizowane knownAuthorities: Teraz zawiera Twoją niestandardową domenę
-    // używaną przez punkty końcowe (token_endpoint, authorization_endpoint).
-    knownAuthorities: [
-      'kartkowka.ciamlogin.com'
-    ],
-    redirectUri: 'http://localhost:3000'
+    // Użyj zmiennej środowiskowej dla clientId, z domyślną wartością dla lokalnego dewelopmentu
+    clientId: process.env.REACT_APP_MSAL_CLIENT_ID || '2eae489a-6d95-4325-a489-c7e762c88a6a',
+    
+    // Użyj zmiennej środowiskowej dla authority
+    authority: process.env.REACT_APP_MSAL_AUTHORITY || 'https://fa06aa37-1f0c-44ea-b4b0-2c97ea9bac8a.ciamlogin.com/fa06aa37-1f0c-44ea-b4b0-2c97ea9bac8a',
+    
+    // Użyj zmiennej środowiskowej dla knownAuthorities
+    knownAuthorities: process.env.REACT_APP_MSAL_KNOWN_AUTHORITIES ? [process.env.REACT_APP_MSAL_KNOWN_AUTHORITIES] : ['kartkowka.ciamlogin.com'],
+    
+    // Użyj zmiennej środowiskowej dla redirectUri
+    redirectUri: process.env.REACT_APP_MSAL_REDIRECT_URI || 'http://localhost:3000'
   },
   system: {
     loggerOptions: {
@@ -78,5 +77,6 @@ root.render(
     </MsalProvider>
   </React.StrictMode>
 );
+
 
 reportWebVitals();
