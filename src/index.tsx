@@ -80,3 +80,4 @@ root.render(
 
 
 reportWebVitals();
+//koniec
