@@ -1,19 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  useMsal,
-  AuthenticatedTemplate,
-  UnauthenticatedTemplate,
-} from '@azure/msal-react';
-import { InteractionType } from '@azure/msal-browser';
+import { useMsal } from '@azure/msal-react';
 import EditStudentDataModal from './EditStudentDataModal';
 import StudentProfileModal from './StudentProfileModal';
 import { Settings, BookOpen, Send, Loader, AlertTriangle } from 'lucide-react'; // Import AlertTriangle
 
-// -----------------------------------------------------------------------------
-// Definicje typów dla danych aplikacji (bez zmian)
-// -----------------------------------------------------------------------------
-
-// Definicja typów dla danych profilu
+// Definicja typów dla danych profilu (musi być zgodna z StudentProfileModal.tsx)
 interface StudentProfile {
   learningStyle: string[];
   preferredDetailLevel: 'Concise' | 'Standard' | 'Detailed';
@@ -38,60 +29,38 @@ interface SaveStudentDataPayload {
   likedMaterialIds?: string[];
 }
 
-// Typ dla wygenerowanych materiałów
+// Typ dla wygenerowanych materiałów - ZMIANA: Dodano consistencyWarning
 interface GeneratedMaterials {
   notes: string;
   flashcards: string;
   mindMapDescription: string;
   quizSessionId: string;
   materialsUsedInSession: Array<{ materialId: string; contentType: string; topic: string }>;
-  consistencyWarning?: string;
+  consistencyWarning?: string; // Nowe opcjonalne pole
 }
-
-// -----------------------------------------------------------------------------
-// Główny komponent App
-// -----------------------------------------------------------------------------
 
 const App: React.FC = () => {
   const { instance, accounts } = useMsal();
   const isAuthenticated = accounts.length > 0;
-  const username = accounts[0]?.username || '';
+  const username = accounts[0]?.username || ''; 
   const [displayName, setDisplayName] = useState(accounts[0]?.name || username);
   const [schoolName, setSchoolName] = useState<string>('');
   const [className, setClassName] = useState<string>('');
-  const [message, setMessage] = useState<string>('');
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>(''); 
+  const [isSaving, setIsSaving] = useState<boolean>(false); 
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   const [studentProfileData, setStudentProfileData] = useState<StudentProfile>(initialProfile);
   const [likedMaterialIds, setLikedMaterialIds] = useState<string[]>([]);
 
-  // Stany dla generowania materiałów
+  // Nowe stany dla generowania materiałów
   const [quizTopic, setQuizTopic] = useState<string>('');
   const [generatedMaterials, setGeneratedMaterials] = useState<GeneratedMaterials | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generateError, setGenerateError] = useState<string>('');
 
-  // -----------------------------------------------------------------------------
-  // Funkcje do logowania i wylogowywania
-  // -----------------------------------------------------------------------------
-
-  const handleLogin = () => {
-    // Wywołanie logowania z przekierowaniem do strony logowania
-    instance.loginRedirect({ scopes: ['openid', 'profile', 'email'] });
-  };
-
-  const handleLogout = () => {
-    // Wylogowanie użytkownika i przekierowanie
-    instance.logoutRedirect();
-  };
-
-  // -----------------------------------------------------------------------------
-  // Funkcje do obsługi danych i API
-  // -----------------------------------------------------------------------------
-
-  // Funkcja do pobierania danych ucznia (bez zmian)
+  // Funkcja do pobierania danych ucznia
   useEffect(() => {
     const fetchStudentData = async () => {
       if (isAuthenticated && username) {
@@ -105,7 +74,7 @@ const App: React.FC = () => {
             const data = await response.json();
             setSchoolName(data.schoolName || '');
             setClassName(data.className || '');
-
+            
             if (data.name) {
               setDisplayName(data.name);
               if (accounts[0]) {
@@ -118,7 +87,7 @@ const App: React.FC = () => {
             setStudentProfileData(data.profile || initialProfile);
             setLikedMaterialIds(data.likedMaterialIds || []);
 
-            setMessage('');
+            setMessage(''); 
           } else if (response.status === 404) {
             setMessage('Brak danych ucznia. Uzupełnij informacje.');
             setSchoolName('');
@@ -133,7 +102,6 @@ const App: React.FC = () => {
           setMessage(`Wystąpił błąd sieci podczas ładowania danych: ${error}`);
         }
       } else {
-        // Resetowanie stanu po wylogowaniu
         setSchoolName('');
         setClassName('');
         setDisplayName('');
@@ -152,6 +120,14 @@ const App: React.FC = () => {
     fetchStudentData();
   }, [isAuthenticated, username, accounts]);
 
+  const handleLogin = () => {
+    instance.loginRedirect({ scopes: ['openid', 'profile', 'email'] });
+  };
+
+  const handleLogout = () => {
+    instance.logoutRedirect();
+  };
+
   const handleSaveStudentData = async (payload: SaveStudentDataPayload) => {
     if (!isAuthenticated) {
       setMessage('Musisz być zalogowany, aby zapisać dane.');
@@ -165,7 +141,7 @@ const App: React.FC = () => {
       const apiEndpoint = process.env.NODE_ENV === 'development'
         ? 'http://localhost:7071/api/saveStudentData'
         : '/api/saveStudentData';
-
+      
       const dataToSend = {
         username: username,
         name: payload.name !== undefined ? payload.name : displayName,
@@ -175,7 +151,7 @@ const App: React.FC = () => {
         likedMaterialIds: payload.likedMaterialIds !== undefined ? payload.likedMaterialIds : likedMaterialIds,
       };
 
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(apiEndpoint, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dataToSend),
@@ -221,6 +197,7 @@ const App: React.FC = () => {
     });
   };
 
+  // NOWA FUNKCJA: Obsługa generowania materiałów
   const handleGenerateLearningMaterials = async () => {
     if (!isAuthenticated) {
       setGenerateError('Musisz być zalogowany, aby generować materiały.');
@@ -239,7 +216,7 @@ const App: React.FC = () => {
       const apiEndpoint = process.env.NODE_ENV === 'development'
         ? 'http://localhost:7071/api/generateLearningMaterials'
         : '/api/generateLearningMaterials';
-
+      
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -268,18 +245,14 @@ const App: React.FC = () => {
     }
   };
 
-  // -----------------------------------------------------------------------------
-  // Główny widok komponentu (UI)
-  // -----------------------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 font-sans p-4">
       <div className="flex flex-col h-full">
-
-        {/* --- Pasek nawigacji --- */}
+        {/* Górny pasek */}
         <div className="flex justify-between items-start w-full mb-8">
-          {/* Lewa kolumna - dane ucznia (widoczne tylko dla zalogowanych) */}
-          <AuthenticatedTemplate>
+          {/* Lewa kolumna - dane ucznia */}
+          {isAuthenticated && (
             <div className="w-1/4 flex flex-col items-start space-y-2">
               <p className="text-sm text-gray-600">Imię i nazwisko: {displayName || 'Nie podano'}</p>
               <p className="text-sm text-gray-600">Szkoła: {schoolName || 'Nie podano'}</p>
@@ -303,22 +276,16 @@ const App: React.FC = () => {
                 </button>
               </div>
             </div>
-          </AuthenticatedTemplate>
-          <UnauthenticatedTemplate>
-            <div className="w-1/4"></div> {/* Pusty div, aby zachować układ */}
-          </UnauthenticatedTemplate>
+          )}
 
           {/* Środkowa kolumna - nagłówek */}
-          <div className="flex-1 text-center mx-4">
+          <div className={`flex-1 text-center ${isAuthenticated ? 'mx-4' : ''}`}>
             <h1 className="text-4xl font-bold mb-4 text-gray-800">
               🎓 Witamy {isAuthenticated ? (displayName || username.split('@')[0] || 'Użytkowniku') : ''} w aplikacji Kartkówka
             </h1>
-            <AuthenticatedTemplate>
+            {isAuthenticated && (
               <p className="text-lg text-gray-700 mb-8">Jesteś zalogowany. Miłej nauki!</p>
-            </AuthenticatedTemplate>
-            <UnauthenticatedTemplate>
-              <p className="text-lg text-gray-700 mb-8">Aby rozpocząć, zaloguj się przez konto ucznia.</p>
-            </UnauthenticatedTemplate>
+            )}
             {message && (
               <p className={`text-md ${message.includes('Błąd') ? 'text-red-600' : 'text-green-600'} mb-4`}>
                 {message}
@@ -328,30 +295,34 @@ const App: React.FC = () => {
 
           {/* Prawa kolumna - logowanie */}
           <div className="w-1/4 text-right">
-            <AuthenticatedTemplate>
-              <p className="text-lg font-semibold text-gray-800 mb-2">Login: {username}</p>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200"
-                disabled={isSaving || isGenerating}
-              >
-                Wyloguj się
-              </button>
-            </AuthenticatedTemplate>
-            <UnauthenticatedTemplate>
-              <button
-                onClick={handleLogin}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition duration-200"
-              >
-                Zaloguj się
-              </button>
-            </UnauthenticatedTemplate>
+            {isAuthenticated ? (
+              <>
+                <p className="text-lg font-semibold text-gray-800 mb-2">Login: {username}</p>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200"
+                  disabled={isSaving || isGenerating}
+                >
+                  Wyloguj się
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-gray-700 mb-4">Aby rozpocząć, zaloguj się przez konto ucznia.</p>
+                <button
+                  onClick={handleLogin}
+                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition duration-200"
+                >
+                  Zaloguj się
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* --- Główna zawartość strony - Generowanie materiałów --- */}
+        {/* Główna zawartość strony - Generowanie materiałów */}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <AuthenticatedTemplate>
+          {isAuthenticated ? (
             <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl">
               <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Generuj Materiały do Kartkówki</h2>
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -391,8 +362,8 @@ const App: React.FC = () => {
               {generatedMaterials && (
                 <div className="space-y-6 mt-6">
                   <h3 className="text-xl font-bold text-gray-800 border-b pb-2 mb-4">Wygenerowane Materiały:</h3>
-
-                  {/* Ostrzeżenie o Spójności */}
+                  
+                  {/* Ostrzeżenie o Spójności - NOWA SEKCJA */}
                   {generatedMaterials.consistencyWarning && (
                     <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg flex items-start space-x-3 mb-4">
                       <AlertTriangle size={24} className="flex-shrink-0 text-yellow-600 mt-1" />
@@ -434,13 +405,11 @@ const App: React.FC = () => {
                 </div>
               )}
             </div>
-          </AuthenticatedTemplate>
-
-          <UnauthenticatedTemplate>
+          ) : (
             <div className="text-center text-gray-600">
               Zaloguj się, aby generować materiały edukacyjne.
             </div>
-          </UnauthenticatedTemplate>
+          )}
         </div>
 
         {/* Linia na dole strony */}
@@ -476,3 +445,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+//koniec
