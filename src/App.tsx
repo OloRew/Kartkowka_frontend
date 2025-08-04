@@ -43,10 +43,10 @@ interface GeneratedMaterials {
 }
 
 // Nowy typ dla fiszek, aby łatwiej je renderować
-interface Flashcard {
-  term: string;
-  definition: string;
-}
+//interface Flashcard {
+//  term: string;
+//  definition: string;
+//}
 
 const App: React.FC = () => {
   const { instance, accounts } = useMsal();
@@ -588,8 +588,7 @@ const App: React.FC = () => {
       <hr className="w-full border-t-2 border-gray-300 mt-auto" />
       {/* Stopka z tekstem "O nas" - na całą szerokość ekranu */}
       <div className="w-full text-center py-4 bg-white text-gray-600 text-sm">
-            <a href="#" className="hover:underline">O nas</a><br/>
-            <a href="#" className="hover:underline">Kontakt</a>
+           Kontakt
       </div>
 
 
