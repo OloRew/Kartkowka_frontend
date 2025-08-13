@@ -14,12 +14,15 @@ import reportWebVitals from './reportWebVitals';
 const msalConfig = {
   auth: {
     //local   
-    //clientId:'2eae489a-6d95-4325-a489-c7e762c88a6a',
-    //authority:'https://fa06aa37-1f0c-44ea-b4b0-2c97ea9bac8a.ciamlogin.com/fa06aa37-1f0c-44ea-b4b0-2c97ea9bac8a',
+    //clientId:'84fcfe1b-fabc-491a-92b3-c0f27e4794c0',
+    //authority:'https://KartkowkaApp.ciamlogin.com/KartkowkaApp.onmicrosoft.com',
     //redirectUri: 'http://localhost:3000'
     clientId: process.env.REACT_APP_MSAL_CLIENT_ID || '',
     authority: process.env.REACT_APP_MSAL_AUTHORITY || '',
-    redirectUri: process.env.NODE_ENV === 'development'? 'http://localhost:3000': (process.env.REACT_APP_MSAL_REDIRECT_URI || '')
+    //redirectUri: 'http://localhost:3000'
+    redirectUri: process.env.REACT_APP_MSAL_REDIRECT_URI || ''
+    //redirectUri: process.env.NODE_ENV === 'development'? 'http://localhost:3000': (process.env.REACT_APP_MSAL_REDIRECT_URI || '')
+
   },
   system: {
     loggerOptions: {

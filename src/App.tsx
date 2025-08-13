@@ -80,7 +80,7 @@ const App: React.FC = () => {
   // Funkcja do pobierania danych ucznia
   useEffect(() => {
     const fetchStudentData = async () => {
-      if (isAuthenticated && username) {
+      if (isAuthenticated ) {//&& username
         const apiEndpoint = process.env.NODE_ENV === 'development'
           ? `http://localhost:7071/api/getStudentData?username=${username}`
           : `/api/getStudentData?username=${username}`;
