@@ -20,7 +20,8 @@ const msalConfig = {
     clientId: process.env.REACT_APP_MSAL_CLIENT_ID || '',
     authority: process.env.REACT_APP_MSAL_AUTHORITY || '',
     //redirectUri: 'http://localhost:3000'
-    redirectUri: process.env.REACT_APP_MSAL_REDIRECT_URI || ''
+    //redirectUri: process.env.REACT_APP_MSAL_REDIRECT_URI || ''
+    redirectUri: 'https://wonderful-bush-0ce748903.1.azurestaticapps.net'
     //redirectUri: process.env.NODE_ENV === 'development'? 'http://localhost:3000': (process.env.REACT_APP_MSAL_REDIRECT_URI || '')
 
   },
