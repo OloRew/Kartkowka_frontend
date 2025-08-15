@@ -386,9 +386,13 @@ const App: React.FC = () => {
     
     {/* 2. Jasnobłękitny pasek - rozciągnięty na całą szerokość ekranu */}
     <div className="w-full bg-blue-100 py-2 px-4 shadow-sm text-center text-sm text-gray-700">
-        {/* Treść Twojego błękitnego paska */}
-        Ucz się dziecko ucz, bo nauka to potęgi klucz - a "Kartkówka" Ci w tym pomoże.
+        {/* Treść Twojego błękitnego paska 
+        Ucz się dziecko ucz, bo nauka to potęgi klucz - a "Kartkówka" Ci w tym pomoże.*/}
+        {isAuthenticated && (
+            <p className="mt-1 text-blue-800 font-medium">Jesteś zalogowany jako: {username}</p>
+        )}
     </div>
+
 
     {/* 3. Główna zawartość strony, z formularzem i sekcjami materiałów - ograniczona szerokością */}
     <div className="w-full max-w-6xl mx-auto p-4">
