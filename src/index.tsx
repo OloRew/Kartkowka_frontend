@@ -17,8 +17,8 @@ const msalConfig = {
     //clientId:'84fcfe1b-fabc-491a-92b3-c0f27e4794c0',
     //authority:'https://KartkowkaApp.ciamlogin.com/KartkowkaApp.onmicrosoft.com',
     //redirectUri: 'http://localhost:3000'
-    clientId: process.env.REACT_APP_MSAL_CLIENT_ID || '',
-    authority: process.env.REACT_APP_MSAL_AUTHORITY || '',
+    clientId: process.env.REACT_APP_MSAL_CLIENT_ID || '84fcfe1b-fabc-491a-92b3-c0f27e4794c0',
+    authority: process.env.REACT_APP_MSAL_AUTHORITY || 'https://KartkowkaApp.ciamlogin.com/KartkowkaApp.onmicrosoft.com',
     redirectUri: process.env.REACT_APP_MSAL_REDIRECT_URI || 'https://wonderful-bush-0ce748903.1.azurestaticapps.net'
     //redirectUri: 'https://wonderful-bush-0ce748903.1.azurestaticapps.net'
     //redirectUri: process.env.NODE_ENV === 'production'? 'http://localhost:3000': (process.env.REACT_APP_MSAL_REDIRECT_URI || '')
