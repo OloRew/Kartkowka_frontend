@@ -32,6 +32,10 @@ jobs:
           api_location: "" # Api source code path - optional
           output_location: "build" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
+          env:
+          REACT_APP_MSAL_AUTHORITY: ${{ secrets.REACT_APP_MSAL_AUTHORITY }}
+          REACT_APP_MSAL_CLIENT_ID: ${{ secrets.REACT_APP_MSAL_CLIENT_ID }}
+          REACT_APP_MSAL_REDIRECT_URI: ${{ secrets.REACT_APP_MSAL_REDIRECT_URI }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -44,3 +48,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_BUSH_0CE748903 }}
           action: "close"
+
