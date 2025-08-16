@@ -48,6 +48,7 @@ interface GeneratedMaterials {
 //  definition: string;
 //}
 
+
 const App: React.FC = () => {
   const { instance, accounts } = useMsal();
   const isAuthenticated = accounts.length > 0;
