@@ -80,13 +80,15 @@ const App: React.FC = () => {
   // Funkcja do pobierania danych ucznia
   useEffect(() => {
     const fetchStudentData = async () => {
-      if (isAuthenticated ) {//&& username
-        const apiEndpoint = process.env.NODE_ENV === 'development'
-          ? `http://localhost:7071/api/getStudentData?username=${username}`
-          : `/api/getStudentData?username=${username}`;
-
+      if (isAuthenticated && username ) {
+        const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
+        const apiEndpoint = process.env.NODE_ENV === 'development'? `http://localhost:7071/api/getStudentData?username=${username}` : `/api/getStudentData?username=${username}`;
         try {
-          const response = await fetch(apiEndpoint);
+          const headers = {
+                'Content-Type': 'application/json',
+                'x-functions-key': functionKey // Dodajemy klucz do nagłówka
+            };
+          const response = await fetch(apiEndpoint, { headers: headers });
           if (response.ok) {
             const data = await response.json();
             setSchoolName(data.schoolName || '');
