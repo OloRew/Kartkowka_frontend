@@ -89,19 +89,15 @@ const App: React.FC = () => {
         const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
         //const apiEndpoint = process.env.NODE_ENV === 'development'? `http://localhost:7071/api/getStudentData?username=${username}` : `/api/getStudentData?username=${username}`;
         //const apiEndpoint = `/api/getStudentData?username=${username}`
-        //const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
-        const apiEndpoint = process.env.NODE_ENV === 'development'
-                ? `http://localhost:7071/api/getStudentData?username=${username}`
-                : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
+        const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
+        //const apiEndpoint = process.env.NODE_ENV === 'development'
+        //        ? `http://localhost:7071/api/getStudentData?username=${username}`
+        //       : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
         try {
-          //const response = await fetch(apiEndpoint);
-          // Konfigurujemy nagłówki
             const headers = {
               'Content-Type': 'application/json',
               'x-functions-key': functionKey,
             };
-
-          // Wysyłamy żądanie z nagłówkami
           const response = await fetch(apiEndpoint, {
               method: 'GET',
               headers: headers
