@@ -85,71 +85,27 @@ const App: React.FC = () => {
   // Funkcja do pobierania danych ucznia
   useEffect(() => {
     const fetchStudentData = async () => {
-      if (isAuthenticated && username ) {
-        const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
-        const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
-        //const apiEndpoint = process.env.NODE_ENV === 'development'
-        //        ? `http://localhost:7071/api/getStudentData?username=${username}`
-        //       : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
-        try {
-            const headers = {
-              'Content-Type': 'application/json',
-              'x-functions-key': functionKey,
-            };
-          const response = await fetch(apiEndpoint, {
-              method: 'GET',
-              headers: headers
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setSchoolName(data.schoolName || '');
-            setClassName(data.className || '');
-            
-            if (data.name) {
-              setDisplayName(data.name);
-              if (accounts[0]) {
-                accounts[0].name = data.name;
-              }
-            } else {
-              setDisplayName(username.split('@')[0]);
-            }
-
-            setStudentProfileData(data.profile || initialProfile);
-            setLikedMaterialIds(data.likedMaterialIds || []);
-
-            setMessage(''); 
-          } else if (response.status === 404) {
-            setMessage('Brak danych ucznia. Uzupełnij informacje.');
-            setSchoolName('');
-            setClassName('');
-            setStudentProfileData(initialProfile);
-            setLikedMaterialIds([]);
-          } else {
-            const errorText = await response.text();
-            setMessage(`Błąd podczas ładowania danych: ${errorText}`);
-          }
-        } catch (error) {
-          setMessage(`Wystąpił błąd sieci podczas ładowania danych: ${error}`);
-        }
-      } else {
-        setSchoolName('');
-        setClassName('');
-        setDisplayName('');
-        setStudentProfileData(initialProfile);
-        setLikedMaterialIds([]);
-        setMessage('');
-        setIsEditModalOpen(false);
-        setIsProfileModalOpen(false);
-        setQuizTopic('');
-        setGeneratedMaterials(null);
-        setIsGenerating(false);
-        setGenerateError('');
+    //const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
+    const apiEndpoint = process.env.NODE_ENV === 'development' ? `http://localhost:7071/api/getStudentData?username=${username}` : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
+    try {
+      const response = await fetch(apiEndpoint, { method: 'GET' });
+      alert("Olo2");
+      if (response.ok) {
+        alert("Olo3");
+        const data = await response.json();
+        setSchoolName(data.schoolName || '');
+        setClassName(data.className || '');
+        setDisplayName(data.name || 'test');
       }
-    };
+    } catch (error) {
+      console.error("Błąd podczas ładowania danych:", error);
+    }
+  };
 
-    fetchStudentData();
-  }, [isAuthenticated, username, accounts]);
+  fetchStudentData();
+}, [username]);
+
+
 
   const handleLogin = () => {
     instance.loginRedirect({ scopes: ['openid', 'profile', 'email'] });
