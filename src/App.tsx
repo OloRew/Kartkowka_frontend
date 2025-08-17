@@ -170,7 +170,7 @@ const App: React.FC = () => {
     try {
       const apiEndpoint = process.env.NODE_ENV === 'development'
         ? 'http://localhost:7071/api/saveStudentData'
-        : '/api/saveStudentData';
+        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData?username=${username}';
       
       const dataToSend = {
         username: username,
@@ -245,7 +245,8 @@ const App: React.FC = () => {
     try {
       const apiEndpoint = process.env.NODE_ENV === 'development'
         ? 'http://localhost:7071/api/generateLearningMaterials'
-        : '/api/generateLearningMaterials';
+        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateLearningMaterials?username=${username}';
+        
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
