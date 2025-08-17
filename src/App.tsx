@@ -249,8 +249,13 @@ const App: React.FC = () => {
 
     try {
       const apiEndpoint = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:7071/api/generateLearningMaterials'
-        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateLearningMaterials?username=${username}';
+        ? `http://localhost:7071/api/generateLearningMaterials?username=${username}`
+        : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateLearningMaterials?username=${username}`;
+      
+      
+      //const apiEndpoint = process.env.NODE_ENV === 'development'
+      //  ? 'http://localhost:7071/api/generateLearningMaterials'
+      //  : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateLearningMaterials?username=${username}';
         
       
       const response = await fetch(apiEndpoint, {
