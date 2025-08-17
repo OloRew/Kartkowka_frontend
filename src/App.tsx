@@ -84,11 +84,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchStudentData = async () => {
       if (isAuthenticated && username ) {
-        const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
-        //const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
+        const functionKey = process.env.REACT_APP_FUNCTION_KEY as string;
         const apiEndpoint = process.env.NODE_ENV === 'development'
                 ? `http://localhost:7071/api/getStudentData?username=${username}`
-                : `/api/getStudentData?username=${username}`;
+                : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
+        //const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
+        //const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
         try {
             const headers = {
               'Content-Type': 'application/json',
