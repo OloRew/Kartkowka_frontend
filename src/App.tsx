@@ -159,64 +159,67 @@ const App: React.FC = () => {
   };
 
   const handleSaveStudentData = async (payload: SaveStudentDataPayload) => {
-    if (!isAuthenticated) {
-      setMessage('Musisz być zalogowany, aby zapisać dane.');
-      return;
-    }
+  if (!isAuthenticated) {
+    setMessage('Musisz być zalogowany, aby zapisać dane.');
+    return;
+  }
 
-    setIsSaving(true);
-    setMessage('Zapisywanie danych...');
+  setIsSaving(true);
+  setMessage('Zapisywanie danych...');
 
-    try {
-      const apiEndpoint = process.env.NODE_ENV === 'development'
-        ? `http://localhost:7071/api/saveStudentData?username=${username}`
-        : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData?username=${username}`;
-      
-      
-      //const apiEndpoint = process.env.NODE_ENV === 'development'
-      //  ? 'http://localhost:7071/api/saveStudentData'
-      //  : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData?username=${username}';
-      
-      const dataToSend = {
-        username: username,
-        name: payload.name !== undefined ? payload.name : displayName,
-        schoolName: payload.schoolName !== undefined ? payload.schoolName : schoolName,
-        className: payload.className !== undefined ? payload.className : className,
-        profile: payload.profile !== undefined ? payload.profile : studentProfileData,
-        likedMaterialIds: payload.likedMaterialIds !== undefined ? payload.likedMaterialIds : likedMaterialIds,
-      };
+  try {
+    const baseUrl = process.env.NODE_ENV === 'development'
+      ? 'http://localhost:7071/api/saveStudentData'
+      : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData';
+    
+    const url = new URL(baseUrl);
+    url.searchParams.append('username', username || '');
+    const apiEndpoint = url.toString();
 
-      const response = await fetch(apiEndpoint, { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSend),
-      });
+    const dataToSend = {
+      username,
+      name: payload.name ?? displayName,
+      schoolName: payload.schoolName ?? schoolName,
+      className: payload.className ?? className,
+      profile: payload.profile ?? studentProfileData,
+      likedMaterialIds: payload.likedMaterialIds ?? likedMaterialIds,
+    };
 
-      if (response.ok) {
-        if (payload.name !== undefined) setDisplayName(payload.name);
-        if (payload.schoolName !== undefined) setSchoolName(payload.schoolName);
-        if (payload.className !== undefined) setClassName(payload.className);
-        if (payload.profile !== undefined) setStudentProfileData(payload.profile);
-        if (payload.likedMaterialIds !== undefined) setLikedMaterialIds(payload.likedMaterialIds);
+    const response = await fetch(apiEndpoint, { 
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string, 
+      },
+      body: JSON.stringify(dataToSend),
+    });
 
-        if (accounts[0] && payload.name !== undefined) {
-          accounts[0].name = payload.name;
-        }
+    if (response.ok) {
+      if (payload.name !== undefined) setDisplayName(payload.name);
+      if (payload.schoolName !== undefined) setSchoolName(payload.schoolName);
+      if (payload.className !== undefined) setClassName(payload.className);
+      if (payload.profile !== undefined) setStudentProfileData(payload.profile);
+      if (payload.likedMaterialIds !== undefined) setLikedMaterialIds(payload.likedMaterialIds);
 
-        setMessage('Dane ucznia zostały zapisane pomyślnie!');
-        setIsEditModalOpen(false);
-        setIsProfileModalOpen(false);
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        const errorText = await response.text();
-        setMessage(`Błąd podczas zapisywania danych: ${errorText}`);
+      if (accounts[0]?.name && payload.name !== undefined) {
+        accounts[0].name = payload.name;
       }
-    } catch (error) {
-      setMessage(`Wystąpił błąd sieci: ${error}`);
-    } finally {
-      setIsSaving(false);
+
+      setMessage('Dane ucznia zostały zapisane pomyślnie!');
+      setIsEditModalOpen(false);
+      setIsProfileModalOpen(false);
+      setTimeout(() => setMessage(''), 3000);
+    } else {
+      const errorText = await response.text();
+      setMessage(`Błąd podczas zapisywania danych: ${errorText}`);
     }
-  };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    setMessage(`Wystąpił błąd sieci: ${errorMessage}`);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleSaveBasicData = async (newSchoolName: string, newClassName: string, newDisplayName: string) => {
     await handleSaveStudentData({
