@@ -169,8 +169,13 @@ const App: React.FC = () => {
 
     try {
       const apiEndpoint = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:7071/api/saveStudentData'
-        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData?username=${username}';
+        ? `http://localhost:7071/api/saveStudentData?username=${username}`
+        : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData?username=${username}`;
+      
+      
+      //const apiEndpoint = process.env.NODE_ENV === 'development'
+      //  ? 'http://localhost:7071/api/saveStudentData'
+      //  : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData?username=${username}';
       
       const dataToSend = {
         username: username,
