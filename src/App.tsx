@@ -15,6 +15,7 @@ interface StudentProfile {
   interests: string;
 }
 
+
 // Domyślne wartości dla profilu ucznia
 const initialProfile: StudentProfile = {
   learningStyle: [],
@@ -43,10 +44,6 @@ interface GeneratedMaterials {
 }
 
 // Nowy typ dla fiszek, aby łatwiej je renderować
-//interface Flashcard {
-//  term: string;
-//  definition: string;
-//}
 
 
 const App: React.FC = () => {
