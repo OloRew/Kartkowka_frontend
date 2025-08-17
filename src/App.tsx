@@ -254,22 +254,18 @@ const App: React.FC = () => {
       const apiEndpoint = process.env.NODE_ENV === 'development'
         ? `http://localhost:7071/api/generateLearningMaterials?username=${username}`
         : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateLearningMaterials?username=${username}`;
-      
-      
-      //const apiEndpoint = process.env.NODE_ENV === 'development'
-      //  ? 'http://localhost:7071/api/generateLearningMaterials'
-      //  : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateLearningMaterials?username=${username}';
-        
-      
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json' ,
+          'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string, 
+        },
         body: JSON.stringify({
           topic: quizTopic,
           username: username,
         }),
       });
-
       if (response.ok) {
         const data: GeneratedMaterials = await response.json();
         setGeneratedMaterials(data);
