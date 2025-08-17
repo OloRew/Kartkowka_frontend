@@ -3,6 +3,8 @@ import { useMsal } from '@azure/msal-react';
 import EditStudentDataModal from './EditStudentDataModal';
 import StudentProfileModal from './StudentProfileModal';
 import { Settings, BookOpen, Send, Loader, AlertTriangle, ChevronDown, ChevronUp, ScrollText, StickyNote, GitGraph, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import logo from './Logo_Kartkowka.png';
 
 // Definicja typów dla danych profilu (musi być zgodna z StudentProfileModal.tsx)
@@ -41,10 +43,11 @@ interface GeneratedMaterials {
 }
 
 // Nowy typ dla fiszek, aby łatwiej je renderować
-interface Flashcard {
-  term: string;
-  definition: string;
-}
+//interface Flashcard {
+//  term: string;
+//  definition: string;
+//}
+
 
 const App: React.FC = () => {
   const { instance, accounts } = useMsal();
@@ -75,16 +78,27 @@ const App: React.FC = () => {
   const [isMindMapVisible, setIsMindMapVisible] = useState<boolean>(false);
   const [isTestsVisible, setIsTestsVisible] = useState<boolean>(true);
 
+
+
   // Funkcja do pobierania danych ucznia
   useEffect(() => {
     const fetchStudentData = async () => {
-      if (isAuthenticated && username) {
+      if (isAuthenticated && username ) {
+        const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
+        //const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
         const apiEndpoint = process.env.NODE_ENV === 'development'
-          ? `http://localhost:7071/api/getStudentData?username=${username}`
-          : `/api/getStudentData?username=${username}`;
-
+                ? `http://localhost:7071/api/getStudentData?username=${username}`
+                : `/api/getStudentData?username=${username}`;
         try {
-          const response = await fetch(apiEndpoint);
+            const headers = {
+              'Content-Type': 'application/json',
+              'x-functions-key': functionKey,
+            };
+          const response = await fetch(apiEndpoint, {
+              method: 'GET',
+              headers: headers
+          });
+          
           if (response.ok) {
             const data = await response.json();
             setSchoolName(data.schoolName || '');
@@ -272,49 +286,45 @@ const App: React.FC = () => {
     setTimeout(() => setGenerateError(''), 3000);
   };
 
-
-
-
   // Helper do renderowania fiszek
-const renderFlashcards = (flashcardText: string) => {
-  if (!flashcardText) return <p>Brak fiszek.</p>;
+  const renderFlashcards = (flashcardText: string) => {
+  if (!flashcardText) {
+    return <p>Brak fiszek.</p>;
+  }
 
-  const flashcardsArray = flashcardText
-    .split('**Pytanie')
-    .slice(1)
-    .map(block => {
-      const questionEndIndex = block.indexOf('**');
-      const questionText = block.substring(questionEndIndex + 2).trim();
+  const flashcardsArray = flashcardText
+    .split(/\[Pytanie \d+\]/g)
+    .slice(1)
+    .map(block => {
+      const termEndIndex = block.indexOf('[Odpowiedź');
+      if (termEndIndex === -1) {
+        return null; // Pomijamy błędne bloki bez odpowiedzi
+      }
 
-      const answerStartIndex = questionText.indexOf('**Odpowiedź');
-      const term = questionText.substring(0, answerStartIndex).trim();
-      const definition = questionText.substring(answerStartIndex + '**Odpowiedź '.length).trim();
+      const term = block.substring(0, termEndIndex).trim();
+      const definition = block.substring(block.indexOf(']') + 1).trim();
 
-      const cleanTerm = term.replace(/[0-9]/g, '').trim();
-      const cleanDefinition = definition.replace(/[0-9]/g, '').replace(/\*\*/g, '').trim();
+      return { term, definition };
+    })
+    .filter((card): card is { term: string; definition: string } => card !== null); // Usunięcie błędnych elementów
 
-      return { term: cleanTerm, definition: cleanDefinition };
-    });
-
-  return (
-    <div className="flex flex-wrap gap-4 p-4">
-      {flashcardsArray.map((card, index) => (
-        <div
-          key={index}
-          className="relative bg-yellow-200 text-gray-800 p-4 rounded-md shadow-md transform transition-transform hover:scale-105 cursor-pointer w-64 h-40 flex flex-col justify-between overflow-hidden"
-          onClick={() => alert(`Pytanie: ${card.term}\n\nOdpowiedź: ${card.definition}`)}
-        >
-          <div className="flex-1 overflow-hidden">
-            <p className="font-bold text-sm mb-1 line-clamp-3">{card.term}</p>
-            <p className="text-sm line-clamp-6">{card.definition}</p>
-          </div>
+    return (
+        <div className="flex flex-wrap gap-4 p-4">
+        {flashcardsArray.map((card, index) => (
+            <div
+            key={index}
+            className="relative bg-yellow-200 text-gray-800 p-4 rounded-md shadow-md transform transition-transform hover:scale-105 cursor-pointer w-64 h-40 flex flex-col justify-between overflow-hidden"
+            onClick={() => alert(`Pytanie: ${card.term}\n\nOdpowiedź: ${card.definition}`)}
+            >
+            <div className="flex-1 overflow-hidden">
+                <p className="font-bold text-sm mb-1 line-clamp-3">{card.term}</p>
+                <p className="text-sm line-clamp-6">{card.definition}</p>
+            </div>
+            </div>
+        ))}
         </div>
-      ))}
-    </div>
-  );
-};
-
-
+    );
+  };
 
 
   return (
@@ -388,9 +398,13 @@ const renderFlashcards = (flashcardText: string) => {
     
     {/* 2. Jasnobłękitny pasek - rozciągnięty na całą szerokość ekranu */}
     <div className="w-full bg-blue-100 py-2 px-4 shadow-sm text-center text-sm text-gray-700">
-        {/* Treść Twojego błękitnego paska */}
-        Ucz się dziecko ucz, bo nauka to potęgi klucz - a "Kartkówka" Ci w tym pomoże.
+        {/* Treść Twojego błękitnego paska 
+        Ucz się dziecko ucz, bo nauka to potęgi klucz - a "Kartkówka" Ci w tym pomoże.*/}
+        {isAuthenticated && (
+            <p className="mt-1 text-blue-800 font-medium">Jesteś zalogowany jako: {username}</p>
+        )}
     </div>
+
 
     {/* 3. Główna zawartość strony, z formularzem i sekcjami materiałów - ograniczona szerokością */}
     <div className="w-full max-w-6xl mx-auto p-4">
@@ -470,30 +484,38 @@ const renderFlashcards = (flashcardText: string) => {
 
                                     {/* Sekcja 2.A: Notatki */}
                                     <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <div
+                                        className="p-3 bg-gray-50 flex justify-between items-center cursor-pointer"
+                                        onClick={() => setAreNotesVisible(!areNotesVisible)}
+                                    >
+                                        <h4 className="flex items-center text-base font-semibold text-gray-700">
+                                        <ScrollText size={16} className="mr-2 text-blue-500" /> Notatki
+                                        </h4>
+                                        {areNotesVisible ? <ChevronUp /> : <ChevronDown />}
+                                    </div>
+                                    {areNotesVisible && (
                                         <div
-                                            className="p-3 bg-gray-50 flex justify-between items-center cursor-pointer"
-                                            onClick={() => setAreNotesVisible(!areNotesVisible)}
+                                        className="p-4 bg-white text-gray-800 relative overflow-auto"
+                                        style={{
+                                            backgroundImage: 'linear-gradient(to bottom, #d4f0ff 1px, transparent 1px)',
+                                            backgroundSize: '100% 20px',
+                                            minHeight: '150px',
+                                            paddingLeft: '30px',
+                                        }}
                                         >
-                                            <h4 className="flex items-center text-base font-semibold text-gray-700">
-                                                <ScrollText size={16} className="mr-2 text-blue-500" /> Notatki
-                                            </h4>
-                                            {areNotesVisible ? <ChevronUp /> : <ChevronDown />}
+                                        <div
+                                            className="absolute top-0 left-0 bottom-0 w-[20px] bg-red-200"
+                                            style={{
+                                            boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)',
+                                            }}
+                                        ></div>
+                                        <div className="prose max-w-none" style={{ lineHeight: '20px' }}>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {generatedMaterials.notes}
+                                            </ReactMarkdown>
                                         </div>
-                                        {areNotesVisible && (
-                                            <div 
-                                                className="p-4 bg-white text-gray-800" 
-                                                style={{ 
-                                                    background: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect width="100%" height="100%" fill="white"/><line x1="0" y1="20" x2="100%" y2="20" stroke="lightblue" stroke-width="1"/><line x1="0" y1="40" x2="100%" y2="40" stroke="lightblue" stroke-width="1"/><line x1="0" y1="60" x2="100%" y2="60" stroke="lightblue" stroke-width="1"/><line x1="0" y1="80" x2="100%" y2="80" stroke="lightblue" stroke-width="1"/><line x1="0" y1="100" x2="100%" y2="100" stroke="lightblue" stroke-width="1"/><line x1="0" y1="120" x2="100%" y2="120" stroke="lightblue" stroke-width="1"/><line x1="0" y1="140" x2="100%" y2="140" stroke="lightblue" stroke-width="1"/><line x1="0" y1="160" x2="100%" y2="160" stroke="lightblue" stroke-width="1"/><line x1="0" y1="180" x2="100%" y2="180" stroke="lightblue" stroke-width="1"/><line x1="0" y1="200" x2="100%" y2="200" stroke="lightblue" stroke-width="1"/><line x1="0" y1="220" x2="100%" y2="220" stroke="lightblue" stroke-width="1"/><line x1="0" y1="240" x2="100%" y2="240" stroke="lightblue" stroke-width="1"/><line x1="0" y1="260" x2="100%" y2="260" stroke="lightblue" stroke-width="1"/><line x1="0" y1="280" x2="100%" y2="280" stroke="lightblue" stroke-width="1"/><line x1="0" y1="300" x2="100%" y2="300" stroke="lightblue" stroke-width="1"/><line x1="0" y1="320" x2="100%" y2="320" stroke="lightblue" stroke-width="1"/><line x1="0" y1="340" x2="100%" y2="340" stroke="lightblue" stroke-width="1"/><line x1="0" y1="360" x2="100%" y2="360" stroke="lightblue" stroke-width="1"/><line x1="0" y1="380" x2="100%" y2="380" stroke="lightblue" stroke-width="1"/><line x1="0" y1="400" x2="100%" y2="400" stroke="lightblue" stroke-width="1"/><line x1="0" y1="420" x2="100%" y2="420" stroke="lightblue" stroke-width="1"/><line x1="0" y1="440" x2="100%" y2="440" stroke="lightblue" stroke-width="1"/><line x1="0" y1="460" x2="100%" y2="460" stroke="lightblue" stroke-width="1"/><line x1="0" y1="480" x2="100%" y2="480" stroke="lightblue" stroke-width="1"/><line x1="0" y1="500" x2="100%" y2="500" stroke="lightblue" stroke-width="1"/><line x1="0" y1="520" x2="100%" y2="520" stroke="lightblue" stroke-width="1"/><line x1="0" y1="540" x2="100%" y2="540" stroke="lightblue" stroke-width="1"/><line x1="0" y1="560" x2="100%" y2="560" stroke="lightblue" stroke-width="1"/><line x1="0" y1="580" x2="100%" y2="580" stroke="lightblue" stroke-width="1"/><line x1="0" y1="600" x2="100%" y2="600" stroke="lightblue" stroke-width="1"/><line x1="0" y1="620" x2="100%" y2="620" stroke="lightblue" stroke-width="1"/><line x1="0" y1="640" x2="100%" y2="640" stroke="lightblue" stroke-width="1"/><line x1="0" y1="660" x2="100%" y2="660" stroke="lightblue" stroke-width="1"/><line x1="0" y1="680" x2="100%" y2="680" stroke="lightblue" stroke-width="1"/><line x1="0" y1="700" x2="100%" y2="700" stroke="lightblue" stroke-width="1"/><line x1="0" y1="720" x2="100%" y2="720" stroke="lightblue" stroke-width="1"/><line x1="0" y1="740" x2="100%" y2="740" stroke="lightblue" stroke-width="1"/><line x1="0" y1="760" x2="100%" y2="760" stroke="lightblue" stroke-width="1"/><line x1="0" y1="780" x2="100%" y2="780" stroke="lightblue" stroke-width="1"/><line x1="0" y1="800" x2="100%" y2="800" stroke="lightblue" stroke-width="1"/><line x1="0" y1="820" x2="100%" y2="820" stroke="lightblue" stroke-width="1"/><line x1="0" y1="840" x2="100%" y2="840" stroke="lightblue" stroke-width="1"/><line x1="0" y1="860" x2="100%" y2="860" stroke="lightblue" stroke-width="1"/><line x1="0" y1="880" x2="100%" y2="880" stroke="lightblue" stroke-width="1"/><line x1="0" y1="900" x2="100%" y2="900" stroke="lightblue" stroke-width="1"/><line x1="0" y1="920" x2="100%" y2="920" stroke="lightblue" stroke-width="1"/><line x1="0" y1="940" x2="100%" y2="940" stroke="lightblue" stroke-width="1"/><line x1="0" y1="960" x2="100%" y2="960" stroke="lightblue" stroke-width="1"/><line x1="0" y1="980" x2="100%" y2="980" stroke="lightblue" stroke-width="1"/><line x1="0" y1="1000" x2="100%" y2="1000" stroke="lightblue" stroke-width="1"/><line x1="20" y1="0" x2="20" y2="100%" stroke="red" stroke-width="1"/></svg>')`,
-                                                    backgroundSize: '100% 100%',
-                                                    minHeight: '150px',
-                                                    paddingLeft: '40px', // Dodatkowy padding dla "marginesu"
-                                                }}
-                                            >
-                                                <div className="whitespace-pre-wrap text-sm">
-                                                    {generatedMaterials.notes}
-                                                </div>
-                                            </div>
-                                        )}
+                                        </div>
+                                    )}
                                     </div>
 
                                     {/* Sekcja 2.B: Fiszki */}
@@ -520,23 +542,32 @@ const renderFlashcards = (flashcardText: string) => {
                                     </div>
 
                                     {/* Sekcja 2.C: Mapa Myśli */}
-                                    <div className="border border-gray-200 rounded-lg">
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
                                         <div
                                             className="p-3 bg-gray-50 flex justify-between items-center cursor-pointer"
                                             onClick={() => setIsMindMapVisible(!isMindMapVisible)}
                                         >
                                             <h4 className="flex items-center text-base font-semibold text-gray-700">
-                                                <GitGraph size={16} className="mr-2 text-red-500" /> Mapa Myśli
+                                            <GitGraph size={16} className="mr-2 text-red-500" /> Mapa Myśli
                                             </h4>
                                             {isMindMapVisible ? <ChevronUp /> : <ChevronDown />}
                                         </div>
                                         {isMindMapVisible && (
-                                            <div className="p-3 bg-white rounded-b-lg whitespace-pre-wrap text-gray-800 text-sm">
-                                                <p className="italic text-gray-600 mb-1 text-xs">Poniżej znajdziesz opis, jak stworzyć mapę myśli. W przyszłości w tym miejscu pojawi się interaktywny graf.</p>
+                                            <div className="p-4 bg-white text-gray-800">
+                                            <p className="text-sm text-gray-500 mb-4 italic">
+                                                Poniżej znajdziesz opis, jak stworzyć mapę myśli. W przyszłości w tym miejscu pojawi się interaktywny graf.
+                                            </p>
+                                            <div className="prose max-w-none">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                                 {generatedMaterials.mindMapDescription}
+                                                </ReactMarkdown>
+                                            </div>
                                             </div>
                                         )}
                                     </div>
+
+
+                                    
                                 </div>
                             )}
                         </div>
@@ -573,8 +604,7 @@ const renderFlashcards = (flashcardText: string) => {
       <hr className="w-full border-t-2 border-gray-300 mt-auto" />
       {/* Stopka z tekstem "O nas" - na całą szerokość ekranu */}
       <div className="w-full text-center py-4 bg-white text-gray-600 text-sm">
-            <a href="#" className="hover:underline">O nas</a><br/>
-            <a href="#" className="hover:underline">Kontakt</a>
+           Kontakt
       </div>
 
 
