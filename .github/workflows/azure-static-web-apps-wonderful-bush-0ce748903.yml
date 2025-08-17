@@ -33,8 +33,7 @@ jobs:
           output_location: "build" # Built app content directory - optional
           
           # Poprawiona linia: Dodano niestandardową komendę build z przekazaniem zmiennych
-          app_build_command: "REACT_APP_MSAL_AUTHORITY=${{ secrets.REACT_APP_MSAL_AUTHORITY }} REACT_APP_MSAL_CLIENT_ID=${{ secrets.REACT_APP_MSAL_CLIENT_ID }} REACT_APP_MSAL_REDIRECT_URI=${{ secrets.REACT_APP_MSAL_REDIRECT_URI }} npm run build"
-          
+          app_build_command: "REACT_APP_MSAL_AUTHORITY=${{ secrets.REACT_APP_MSAL_AUTHORITY }} REACT_APP_MSAL_CLIENT_ID=${{ secrets.REACT_APP_MSAL_CLIENT_ID }} REACT_APP_MSAL_REDIRECT_URI=${{ secrets.REACT_APP_MSAL_REDIRECT_URI }} REACT_APP_FUNCTION_KEY=${{ secrets.REACT_APP_FUNCTION_KEY }} npm run build"
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
@@ -48,3 +47,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_BUSH_0CE748903 }}
           action: "close"
+
