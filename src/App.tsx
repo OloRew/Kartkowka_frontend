@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import EditStudentDataModal from './EditStudentDataModal';
 import StudentProfileModal from './StudentProfileModal';
-import { Settings, BookOpen, Send, Loader, AlertTriangle, ChevronDown, ChevronUp, ScrollText, StickyNote, GitGraph, User } from 'lucide-react';
+import { Settings, BookOpen, Send, Loader, AlertTriangle, ChevronDown, ChevronUp, ScrollText, StickyNote, GitGraph, User, BarChart3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import logo from './Logo_Kartkowka.png';
@@ -14,7 +14,6 @@ interface StudentProfile {
   preferredDifficultyLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   interests: string;
 }
-
 
 // Domyślne wartości dla profilu ucznia
 const initialProfile: StudentProfile = {
@@ -33,7 +32,7 @@ interface SaveStudentDataPayload {
   likedMaterialIds?: string[];
 }
 
-// Typ dla wygenerowanych materiałów - ZMIANA: Dodano consistencyWarning
+// Typ dla wygenerowanych materiałów - ZMIANA: Dodano consistencyWarning i embeddingPlot
 interface GeneratedMaterials {
   notes: string;
   flashcards: string;
@@ -41,10 +40,61 @@ interface GeneratedMaterials {
   quizSessionId: string;
   materialsUsedInSession: Array<{ materialId: string; contentType: string; topic: string }>;
   consistencyWarning?: string; // Nowe opcjonalne pole
+  embeddingPlot?: string; // Nowe pole na wykres embeddingów
 }
 
-// Nowy typ dla fiszek, aby łatwiej je renderować
+// Nowy komponent modalny do wyświetlania wykresu
+const EmbeddingPlotModal: React.FC<{ 
+  isOpen: boolean; 
+  onClose: () => void; 
+  embeddingPlot: string | null | undefined;
+}> = ({ isOpen, onClose, embeddingPlot }) => {
+  if (!isOpen) return null;
 
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-800">Wykres podobieństwa embeddingów</h2>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+        
+        {embeddingPlot ? (
+          <>
+            <img 
+              src={`data:image/png;base64,${embeddingPlot}`} 
+              alt="Wykres porównania embeddingów"
+              className="w-full h-auto border border-gray-300 rounded"
+            />
+            <div className="mt-4 text-sm text-gray-600">
+              <p>Wykres przedstawia porównanie pierwszych 30 wymiarów embeddingów zapytania i znalezionych materiałów.</p>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8">
+            <BarChart3 size={48} className="mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-500">Brak danych wykresu do wyświetlenia.</p>
+            <p className="text-sm text-gray-400 mt-2">Wykres może być niedostępny z powodu zbyt krótkich embeddingów lub błędu generowania.</p>
+          </div>
+        )}
+        
+        <div className="mt-6 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Zamknij
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const { instance, accounts } = useMsal();
@@ -57,7 +107,7 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // NOWY STAN
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   const [studentProfileData, setStudentProfileData] = useState<StudentProfile>(initialProfile);
   const [likedMaterialIds, setLikedMaterialIds] = useState<string[]>([]);
@@ -75,7 +125,8 @@ const App: React.FC = () => {
   const [isMindMapVisible, setIsMindMapVisible] = useState<boolean>(false);
   const [isTestsVisible, setIsTestsVisible] = useState<boolean>(true);
 
-
+  // Nowy stan do zarządzania wykresem embeddingów
+  const [isEmbeddingPlotModalOpen, setIsEmbeddingPlotModalOpen] = useState<boolean>(false);
 
   // Funkcja do pobierania danych ucznia
   useEffect(() => {
@@ -85,8 +136,6 @@ const App: React.FC = () => {
         const apiEndpoint = process.env.NODE_ENV === 'development'
                 ? `http://localhost:7071/api/getStudentData?username=${username}`
                 : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
-        //const functionKey = "W_fAwtxeCceuZOcghlEJ207IO0nvMoIUJJbY2eatHi4cAzFuwEnCVw==";
-        //const apiEndpoint = `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${username}`;
         try {
             const headers = {
               'Content-Type': 'application/json',
@@ -265,6 +314,7 @@ const App: React.FC = () => {
       });
       if (response.ok) {
         const data: GeneratedMaterials = await response.json();
+        console.log("Odpowiedź z backendu:", data);
         setGeneratedMaterials(data);
         setGenerateError('');
         setMessage('Materiały wygenerowane pomyślnie!');
@@ -296,25 +346,25 @@ const App: React.FC = () => {
 
   // Helper do renderowania fiszek
   const renderFlashcards = (flashcardText: string) => {
-  if (!flashcardText) {
-    return <p>Brak fiszek.</p>;
-  }
+  if (!flashcardText) {
+    return <p>Brak fiszek.</p>;
+  }
 
-  const flashcardsArray = flashcardText
-    .split(/\[Pytanie \d+\]/g)
-    .slice(1)
-    .map(block => {
-      const termEndIndex = block.indexOf('[Odpowiedź');
-      if (termEndIndex === -1) {
-        return null; // Pomijamy błędne bloki bez odpowiedzi
-      }
+  const flashcardsArray = flashcardText
+    .split(/\[Pytanie \d+\]/g)
+    .slice(1)
+    .map(block => {
+      const termEndIndex = block.indexOf('[Odpowiedź');
+      if (termEndIndex === -1) {
+        return null; // Pomijamy błędne bloki bez odpowiedzi
+      }
 
-      const term = block.substring(0, termEndIndex).trim();
-      const definition = block.substring(block.indexOf(']') + 1).trim();
+      const term = block.substring(0, termEndIndex).trim();
+      const definition = block.substring(block.indexOf(']') + 1).trim();
 
-      return { term, definition };
-    })
-    .filter((card): card is { term: string; definition: string } => card !== null); // Usunięcie błędnych elementów
+      return { term, definition };
+    })
+    .filter((card): card is { term: string; definition: string } => card !== null); // Usunięcie błędnych elementów
 
     return (
         <div className="flex flex-wrap gap-4 p-4">
@@ -406,8 +456,6 @@ const App: React.FC = () => {
     
     {/* 2. Jasnobłękitny pasek - rozciągnięty na całą szerokość ekranu */}
     <div className="w-full bg-blue-100 py-2 px-4 shadow-sm text-center text-sm text-gray-700">
-        {/* Treść Twojego błękitnego paska 
-        Ucz się dziecko ucz, bo nauka to potęgi klucz - a "Kartkówka" Ci w tym pomoże.*/}
         {isAuthenticated && (
             <p className="mt-1 text-blue-800 font-medium">Jesteś zalogowany jako: {username}</p>
         )}
@@ -477,6 +525,17 @@ const App: React.FC = () => {
                             </div>
                             {isMaterialsVisible && (
                                 <div className="p-3 space-y-4">
+                                    {/* Przycisk do otwarcia wykresu embeddingów - ZAWSZE widoczny */}
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={() => setIsEmbeddingPlotModalOpen(true)}
+                                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200 flex items-center justify-center text-sm"
+                                        >
+                                            <BarChart3 className="mr-1" size={16} />
+                                            {generatedMaterials.embeddingPlot ? 'Pokaż wykres podobieństwa' : 'Informacje o wykresie'}
+                                        </button>
+                                    </div>
+
                                     {generatedMaterials.consistencyWarning && (
                                         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-lg flex items-start space-x-2">
                                             <AlertTriangle size={20} className="flex-shrink-0 text-yellow-600 mt-1" />
@@ -573,9 +632,6 @@ const App: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-
-
-                                    
                                 </div>
                             )}
                         </div>
@@ -615,8 +671,6 @@ const App: React.FC = () => {
            Kontakt
       </div>
 
-
-      
       {/* Modal do edycji podstawowych danych */}
       {isEditModalOpen && (
         <EditStudentDataModal
@@ -641,6 +695,13 @@ const App: React.FC = () => {
           isSaving={isSaving}
         />
       )}
+
+      {/* Modal do wyświetlania wykresu embeddingów */}
+      <EmbeddingPlotModal
+        isOpen={isEmbeddingPlotModalOpen}
+        onClose={() => setIsEmbeddingPlotModalOpen(false)}
+        embeddingPlot={generatedMaterials?.embeddingPlot || null}
+      />
     </div>
   );
 };
