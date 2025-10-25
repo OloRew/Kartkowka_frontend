@@ -227,7 +227,7 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
   const renderFlashcards = (flashcardText: string) => {
     if (!flashcardText) return <p>Brak fiszek.</p>;
 
-    const regex = /\[Pytanie\s*\d+\]\s*([\s\S]*?)\s*\[Odpowiedź\s*\d+\]\s*([\s\S]*?)(?=\[Pytanie\s*\d+\]|\Z)/g;
+    const regex = /\[Pytanie\s*\d+\]\s*([\s\S]*?)\s*\[Odpowiedź\s*\d+\]\s*([\s\S]*?)(?=\[Pytanie\s*\d+\]|$)/g;
     const flashcardsArray: { term: string; definition: string }[] = [];
     let match;
     while ((match = regex.exec(flashcardText)) !== null) {
