@@ -2,6 +2,9 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+  "node": "20.x"
+  },
   "dependencies": {
     "@azure/msal-browser": "^4.18.0",
     "@azure/msal-react": "^3.0.16",
