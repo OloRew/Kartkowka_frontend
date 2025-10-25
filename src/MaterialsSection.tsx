@@ -370,3 +370,4 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
 };
 
 export default MaterialsSection;
+//koniec

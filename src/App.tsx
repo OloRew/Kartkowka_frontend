@@ -3,7 +3,7 @@ import { useMsal } from '@azure/msal-react';
 import EditStudentDataModal from './EditStudentDataModal';
 import StudentProfileModal from './StudentProfileModal';
 import MaterialsSection from './MaterialsSection';
-import TestsSection from './TestsSection';
+import TestsSection, { GeneratedTests } from './TestsSection'; // POPRAWIONY IMPORT
 import { 
   Settings, 
   BookOpen, 
@@ -82,7 +82,10 @@ const App: React.FC = () => {
 
   const [quizTopic, setQuizTopic] = useState<string>('');
   const [generatedMaterials, setGeneratedMaterials] = useState<GeneratedMaterials | null>(null);
+  const [generatedTests, setGeneratedTests] = useState<GeneratedTests | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isGeneratingTests, setIsGeneratingTests] = useState<boolean>(false);
+  const [isCheckingTests, setIsCheckingTests] = useState<boolean>(false);
   const [generateError, setGenerateError] = useState<string>('');
 
   useEffect(() => {
@@ -134,7 +137,10 @@ const App: React.FC = () => {
         setIsProfileModalOpen(false);
         setQuizTopic('');
         setGeneratedMaterials(null);
+        setGeneratedTests(null);
         setIsGenerating(false);
+        setIsGeneratingTests(false);
+        setIsCheckingTests(false);
         setGenerateError('');
       }
     };
@@ -205,17 +211,14 @@ const App: React.FC = () => {
     }
   };
 
-  // KLUCZOWA ZMIANA: Poprawiona obsługa feedbacku
   const handleMaterialFeedback = async (feedback: MaterialFeedback) => {
     try {
-      // Aktualizacja stanu lokalnego
       const newFeedbacks = { ...materialFeedbacks };
       feedback.materials.forEach(material => {
         newFeedbacks[material.materialId] = feedback;
       });
       setMaterialFeedbacks(newFeedbacks);
       
-      // Aktualizacja listy polubionych materiałów
       const materialIds = feedback.materials.map(m => m.materialId);
       if (feedback.isLiked) {
         const newLikedIds = Array.from(new Set([...likedMaterialIds, ...materialIds]));
@@ -225,7 +228,6 @@ const App: React.FC = () => {
         setLikedMaterialIds(newLikedIds);
       }
       
-      // Wysłanie feedbacku do backendu
       const apiEndpoint = process.env.NODE_ENV === 'development'
         ? 'http://localhost:7071/api/materialUserFeedback'
         : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/materialUserFeedback';
@@ -239,7 +241,7 @@ const App: React.FC = () => {
         body: JSON.stringify({
           username,
           school: schoolName,
-          materials: feedback.materials,  // Wysyłamy całą listę materiałów
+          materials: feedback.materials,
           isLiked: feedback.isLiked,
           isRequired: feedback.isRequired
         }),
@@ -283,6 +285,7 @@ const App: React.FC = () => {
 
     setIsGenerating(true);
     setGeneratedMaterials(null);
+    setGeneratedTests(null);
     setGenerateError('');
 
     try {
@@ -321,9 +324,98 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGenerateTests = () => {
-    setGenerateError('Funkcja generowania testów jest jeszcze w fazie rozwoju.');
-    setTimeout(() => setGenerateError(''), 3000);
+  const handleGenerateTests = async () => {
+    if (!isAuthenticated) {
+      setGenerateError('Musisz być zalogowany, aby generować testy.');
+      return;
+    }
+    if (!quizTopic.trim()) {
+      setGenerateError('Proszę podać temat testów.');
+      return;
+    }
+
+    setIsGeneratingTests(true);
+    setGeneratedTests(null);
+    setGenerateError('');
+
+    try {
+      const apiEndpoint = process.env.NODE_ENV === 'development'
+        ? `http://localhost:7071/api/generateTests`
+        : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/generateTests`;
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string, 
+        },
+        body: JSON.stringify({
+          topic: quizTopic,
+          username: username,
+        }),
+      });
+      
+      if (response.ok) {
+        const data: GeneratedTests = await response.json();
+        setGeneratedTests(data);
+        setGenerateError('');
+        setMessage('Testy wygenerowane pomyślnie!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        const errorText = await response.text();
+        setGenerateError(`Błąd podczas generowania testów: ${errorText}`);
+      }
+    } catch (error) {
+      setGenerateError(`Wystąpił błąd sieci podczas generowania testów: ${error}`);
+    } finally {
+      setIsGeneratingTests(false);
+    }
+  };
+
+  const handleCheckTests = async (answers: Record<number, string>) => {
+    if (!generatedTests) return;
+
+    setIsCheckingTests(true);
+
+    try {
+      const apiEndpoint = process.env.NODE_ENV === 'development'
+        ? `http://localhost:7071/api/checkTestAnswers`
+        : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/checkTestAnswers`;
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string, 
+        },
+        body: JSON.stringify({
+          quizSessionId: generatedTests.quizSessionId,
+          answers: answers,
+          username: username,
+        }),
+      });
+      
+      if (response.ok) {
+        const results = await response.json();
+        setGeneratedTests((prev: GeneratedTests | null) => ({
+          ...prev!,
+          questions: prev!.questions.map((q: any, i: number) => ({ // DODANE TYPY
+            ...q,
+            userAnswer: answers[i],
+            isCorrect: results.results[i]?.isCorrect
+          }))
+        }));
+        setMessage('Testy sprawdzone pomyślnie!');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        const errorText = await response.text();
+        setGenerateError(`Błąd podczas sprawdzania testów: ${errorText}`);
+      }
+    } catch (error) {
+      setGenerateError(`Wystąpił błąd sieci podczas sprawdzania testów: ${error}`);
+    } finally {
+      setIsCheckingTests(false);
+    }
   };
 
   return (
@@ -348,7 +440,7 @@ const App: React.FC = () => {
                           <button
                               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                               className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition duration-200"
-                              disabled={isSaving || isGenerating}
+                              disabled={isSaving || isGenerating || isGeneratingTests}
                           >
                               <User size={24} className="text-gray-600" />
                           </button>
@@ -410,12 +502,12 @@ const App: React.FC = () => {
                                   value={quizTopic}
                                   onChange={(e) => setQuizTopic(e.target.value)}
                                   className="flex-1 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  disabled={isGenerating}
+                                  disabled={isGenerating || isGeneratingTests}
                               />
                               <button
                                   onClick={handleGenerateLearningMaterials}
                                   className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200 flex items-center justify-center sm:w-auto w-full text-sm"
-                                  disabled={isGenerating || !quizTopic.trim()}
+                                  disabled={isGenerating || isGeneratingTests || !quizTopic.trim()}
                               >
                                   {isGenerating ? (
                                       <>
@@ -432,10 +524,19 @@ const App: React.FC = () => {
                               <button
                                   onClick={handleGenerateTests}
                                   className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-200 flex items-center justify-center sm:w-auto w-full text-sm"
-                                  disabled={isGenerating || !quizTopic.trim()}
+                                  disabled={isGenerating || isGeneratingTests || !quizTopic.trim()}
                               >
-                                  <Send className="mr-1" size={16} />
-                                  Generuj Testy
+                                  {isGeneratingTests ? (
+                                      <>
+                                          <Loader className="animate-spin mr-1" size={16} />
+                                          Generowanie...
+                                      </>
+                                  ) : (
+                                      <>
+                                          <Send className="mr-1" size={16} />
+                                          Generuj Testy
+                                      </>
+                                  )}
                               </button>
                           </div>
                           {generateError && (
@@ -452,9 +553,14 @@ const App: React.FC = () => {
                         onMaterialFeedback={handleMaterialFeedback}
                         username={username}
                         schoolName={schoolName}
+                        quizTopic={quizTopic}
                       />
                   
-                      <TestsSection />
+                      <TestsSection
+                        generatedTests={generatedTests}
+                        onCheckTests={handleCheckTests}
+                        isChecking={isCheckingTests}
+                      />
                   </div>
               ) : (
                   <div className="text-center text-gray-600">
