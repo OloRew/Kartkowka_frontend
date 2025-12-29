@@ -24,7 +24,10 @@ export interface TestQuestion {
 }
 
 export interface GeneratedTests {
+   kartkowkaId: string;
   questions: TestQuestion[];
+  materialsUsed?: string[];
+  studentClass?: string;
   quizSessionId: string;
 }
 
