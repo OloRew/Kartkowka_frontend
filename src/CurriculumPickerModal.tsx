@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronDown, ChevronRight, CheckSquare, Square, Menu } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { useCurriculumData, CurriculumTopic } from './hooks/useCurriculumData';
 
 // ============================================

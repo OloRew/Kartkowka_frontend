@@ -169,7 +169,8 @@ const YourTestsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    setFilteredSessions(filterAndSortSessions());
+  setFilteredSessions(filterAndSortSessions());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessions, searchQuery, selectedSubject, selectedTopic, sortBy, curriculumFilter]);
 
   const handleClearCurriculumFilter = () => {
