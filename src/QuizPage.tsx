@@ -9,7 +9,6 @@ import { CurriculumData } from './hooks/useCurriculumData';
 import {
   CumulativePerformance,
   updateCumulativePerformance,
-  createEmptyCumulativePerformance,
   TestQuestion
 } from './cumPerf';
 
@@ -169,21 +168,21 @@ function QuizPage({
     initialCumulativePerformance
   );
 
-  const findCurriculumTopicByConceptId = (
-    conceptId: string,
-    subject: string,
-    studentClass: string
-  ): { topicName: string; topicId: string } | null => {
-    if (!curriculumData) return null;
-    const subjectData = curriculumData.subjects.find(s => s.subject === subject);
-    if (!subjectData) return null;
-    for (const topic of subjectData.topics) {
-      if (topic.concepts.some(c => c.conceptId === conceptId)) {
-        return { topicName: topic.topicName, topicId: topic.topicId };
-      }
-    }
-    return null;
-  };
+ // const findCurriculumTopicByConceptId = (
+ //   conceptId: string,
+ //   subject: string,
+ //   studentClass: string
+ // ): { topicName: string; topicId: string } | null => {
+ //   if (!curriculumData) return null;
+ //   const subjectData = curriculumData.subjects.find(s => s.subject === subject);
+ //   if (!subjectData) return null;
+ //   for (const topic of subjectData.topics) {
+ //     if (topic.concepts.some(c => c.conceptId === conceptId)) {
+ //       return { topicName: topic.topicName, topicId: topic.topicId };
+ //     }
+ //   }
+ //   return null;
+ // };
 
   // ============================================
   // EFFECTS
@@ -302,7 +301,7 @@ function QuizPage({
         onMessage(`✓ Temat "${selection.displayText}" zapisany`);
         setTimeout(() => onMessage(''), 3000);
       } else {
-        const errorText = await response.text();
+        //const errorText = await response.text();
         onMessage('⚠️ Nie udało się automatycznie zapisać tematu');
         setTimeout(() => onMessage(''), 3000);
       }

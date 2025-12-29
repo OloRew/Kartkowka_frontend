@@ -108,7 +108,6 @@ const AppContent: React.FC = () => {
   // ============================================
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(false);
   const [loadedSessionId, setLoadedSessionId] = useState<string>('');
-  const [loadedSessionName, setLoadedSessionName] = useState<string>('');
   const [loadedSubject, setLoadedSubject] = useState<string>('');
   const [loadedTopic, setLoadedTopic] = useState<string>('');
   const [loadedMaterials, setLoadedMaterials] = useState<GeneratedMaterials | null>(null);
@@ -140,7 +139,6 @@ const AppContent: React.FC = () => {
           setLoadedSessionId(sessionData.id || '');
           setLoadedSubject(sessionData.subject || '');
           setLoadedTopic(sessionData.topic || '');
-          setLoadedSessionName(sessionData.sessionName || 'Wczytana sesja');
           
           if (sessionData.curriculumId) {
             setLoadedCurriculumId(sessionData.curriculumId);
@@ -243,7 +241,6 @@ const AppContent: React.FC = () => {
         setLoadedTopic('');
         setLoadedMaterials(null);
         setLoadedTests(null);
-        setLoadedSessionName('');
         setLoadedCurriculumId('');
         setLoadedCurriculumTopicIds([]);
         setLoadedTopicNames([]);
@@ -470,7 +467,6 @@ const AppContent: React.FC = () => {
     setLoadedTopic(topic);
     setLoadedMaterials(materials);
     setLoadedTests(tests);
-    setLoadedSessionName(sessionName);
     setLoadedSessionId(sessionId);
   };
 
