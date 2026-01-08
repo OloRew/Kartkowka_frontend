@@ -7,7 +7,7 @@ import QuizPage from './QuizPage';
 import TwojeKartkowki from './YourTestsPage';
 import PlanNauki from './StudyPlanPage';
 import ONas from './AboutPage';
-import { Settings, User, Loader, Key, Menu } from 'lucide-react';
+import { Settings, User, Loader, Key} from 'lucide-react';
 import logo from './Logo_Kartkowka.png';
 import { GeneratedTests } from './TestsSection';
 import { useCurriculumData } from './hooks/useCurriculumData';
