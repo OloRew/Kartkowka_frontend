@@ -7,12 +7,11 @@ import QuizPage from './QuizPage';
 import TwojeKartkowki from './YourTestsPage';
 import PlanNauki from './StudyPlanPage';
 import ONas from './AboutPage';
-import { Settings, User, Loader, Key } from 'lucide-react';  // 🆕 Dodano Key
+import { Settings, User, Loader, Key, Menu } from 'lucide-react';
 import logo from './Logo_Kartkowka.png';
 import { GeneratedTests } from './TestsSection';
 import { useCurriculumData } from './hooks/useCurriculumData';
-import ApiKeyModal from './ApiKeyModal';  // 🆕 DODANE
-import UsageLimitWarning from './UsageLimitWarning';  // 🆕 DODANE
+import ApiKeyModal from './ApiKeyModal';
 
 // ============================================
 // INTERFACES
@@ -76,6 +75,57 @@ interface MaterialFeedback {
 }
 
 // ============================================
+// 🆕 USAGE PROGRESS BAR COMPONENT
+// ============================================
+interface UsageProgressBarProps {
+  usedToday: number;
+  dailyLimit: number;
+  hasCustomKey: boolean;
+  onClick: () => void;
+}
+
+const UsageProgressBar: React.FC<UsageProgressBarProps> = ({ 
+  usedToday, 
+  dailyLimit, 
+  hasCustomKey,
+  onClick 
+}) => {
+  if (hasCustomKey) return null;
+
+  const percentage = dailyLimit > 0 ? (usedToday / dailyLimit) * 100 : 0;
+  const isNearLimit = percentage >= 80;
+  const isAtLimit = usedToday >= dailyLimit;
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition duration-200 cursor-pointer"
+      title="Kliknij aby zobaczyć szczegóły i dodać własny klucz API"
+    >
+      <div className="flex flex-col items-end">
+        <span className={`text-xs font-semibold ${
+          isAtLimit ? 'text-red-600' : 
+          isNearLimit ? 'text-yellow-600' : 
+          'text-gray-600'
+        }`}>
+          {usedToday}/{dailyLimit}
+        </span>
+      </div>
+      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className={`h-full transition-all duration-300 ${
+            isAtLimit ? 'bg-red-500' :
+            isNearLimit ? 'bg-yellow-500' :
+            'bg-blue-500'
+          }`}
+          style={{ width: `${Math.min(percentage, 100)}%` }}
+        />
+      </div>
+    </button>
+  );
+};
+
+// ============================================
 // APP CONTENT COMPONENT
 // ============================================
 
@@ -98,7 +148,8 @@ const AppContent: React.FC = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState<boolean>(false);
+  const [isHamburgerOpen, setIsHamburgerOpen] = useState<boolean>(false);
   const [studentProfileData, setStudentProfileData] = useState<StudentProfile>(initialProfile);
   const [likedMaterialIds, setLikedMaterialIds] = useState<string[]>([]);
   const [materialFeedbacks, setMaterialFeedbacks] = useState<Record<string, MaterialFeedback>>({});
@@ -117,7 +168,7 @@ const AppContent: React.FC = () => {
   const [loadedTopicNames, setLoadedTopicNames] = useState<string[]>([]);
   const [loadedPrimaryConcepts, setLoadedPrimaryConcepts] = useState<string[]>([]);
 
-  // 🆕 API Key state
+  // API Key state
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [hasCustomKey, setHasCustomKey] = useState<boolean>(false);
   const [usageUsedToday, setUsageUsedToday] = useState<number>(0);
@@ -250,7 +301,7 @@ const AppContent: React.FC = () => {
     fetchStudentData();
   }, [isAuthenticated, username, accounts]);
 
-  // 🆕 EFFECT - Fetch API Key Status
+  // EFFECT - Fetch API Key Status
   useEffect(() => {
     const fetchApiKeyStatus = async () => {
       if (!isAuthenticated || !username) return;
@@ -276,7 +327,6 @@ const AppContent: React.FC = () => {
           const data = await response.json();
           setHasCustomKey(data.hasCustomKey || false);
           
-          // Pobierz też usage limits
           const usageEndpoint = process.env.NODE_ENV === 'development'
             ? 'http://localhost:7071/api/getUsageStatus'
             : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getUsageStatus';
@@ -421,7 +471,7 @@ const AppContent: React.FC = () => {
     handleSaveStudentData({ profile: profileData }); 
   };
 
-  // 🆕 HANDLER - API Key Updated
+  // HANDLER - API Key Updated
   const handleApiKeyUpdated = async () => {
     if (!username) return;
 
@@ -470,6 +520,11 @@ const AppContent: React.FC = () => {
     setLoadedSessionId(sessionId);
   };
 
+  // Handler do zamykania hamburger menu po kliknięciu w link
+  const handleLinkClick = () => {
+    setIsHamburgerOpen(false);
+  };
+
   // ============================================
   // RENDER
   // ============================================
@@ -477,62 +532,135 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-white text-gray-900 font-sans flex flex-col">
       <header className="w-full bg-white">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-4">
-          <div className="flex items-center gap-6">
-            <img src={logo} alt="Logo Kartkówka" className="h-10" />
-            <Link to="/" className="font-medium text-gray-700 hover:text-gray-900">Kartkówka</Link>
-            <Link to="/twoje-kartkowki" className="font-medium text-gray-700 hover:text-gray-900">Zapisane kartkówki</Link>
-            <Link to="/plan-nauki" className="font-medium text-gray-700 hover:text-gray-900">Plan nauki i wyniki</Link>
-            <Link to="/o-nas" className="font-medium text-gray-700 hover:text-gray-900">O Nas</Link>
-          </div>
-          <div className="relative">
-            {isAuthenticated ? (
-              <>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition duration-200"
-                  disabled={isSaving}
-                >
-                  <User size={24} className="text-gray-600" />
-                </button>
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                    <button 
-                      onClick={() => { setIsEditModalOpen(true); setIsDropdownOpen(false); }} 
-                      className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                    >
-                      <Settings size={16} className="mr-2" /> Edytuj dane podstawowe
-                    </button>
-                    <button 
-                      onClick={() => { setIsProfileModalOpen(true); setIsDropdownOpen(false); }} 
-                      className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                    >
-                      Profil
-                    </button>
-                    {/* 🆕 NOWA POZYCJA */}
-                    <button 
-                      onClick={() => { setIsApiKeyModalOpen(true); setIsDropdownOpen(false); }} 
-                      className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                    >
-                      <Key size={16} className="mr-2" /> Klucz API do Twojego AI
-                    </button>
-                    <div className="border-t border-gray-200"></div>
-                    <button 
-                      onClick={() => { handleLogout(); setIsDropdownOpen(false); }} 
-                      className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition duration-150"
-                    >
-                      Wyloguj
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <button 
-                onClick={handleLogin} 
-                className="bg-blue-400 hover:bg-blue-500 text-white text-sm font-bold py-1 px-4 rounded-lg shadow-md transition duration-200"
+          <div className="flex items-center gap-4">
+            {/* HAMBURGER MENU */}
+            <div className="relative">
+              <button
+                onClick={() => setIsHamburgerOpen(!isHamburgerOpen)}
+                className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition duration-200 flex items-center justify-center"
+                aria-label="Menu"
               >
-                Zaloguj się
+                {/* Animowany hamburger/X */}
+                <div className="w-6 h-5 flex flex-col justify-between">
+                  <span
+                    className={`block h-0.5 w-6 bg-gray-600 transition-all duration-300 ${
+                      isHamburgerOpen ? 'rotate-45 translate-y-2' : ''
+                    }`}
+                  />
+                  <span
+                    className={`block h-0.5 w-6 bg-gray-600 transition-all duration-300 ${
+                      isHamburgerOpen ? 'opacity-0' : ''
+                    }`}
+                  />
+                  <span
+                    className={`block h-0.5 w-6 bg-gray-600 transition-all duration-300 ${
+                      isHamburgerOpen ? '-rotate-45 -translate-y-2' : ''
+                    }`}
+                  />
+                </div>
               </button>
+              
+              {/* Dropdown menu hamburgera */}
+              {isHamburgerOpen && (
+                <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <Link
+                    to="/"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                  >
+                    Kartkówka
+                  </Link>
+                  <Link
+                    to="/twoje-kartkowki"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                  >
+                    Zapisane kartkówki
+                  </Link>
+                  <Link
+                    to="/plan-nauki"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                  >
+                    Plan nauki i wyniki
+                  </Link>
+                  <Link
+                    to="/o-nas"
+                    onClick={handleLinkClick}
+                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                  >
+                    O Nas
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Logo */}
+            <img src={logo} alt="Logo Kartkówka" className="h-10" />
+          </div>
+
+          {/* 🆕 Right side: Progress Bar + User Menu */}
+          <div className="flex items-center gap-2">
+            {/* 🆕 Usage Progress Bar */}
+            {isAuthenticated && (
+              <UsageProgressBar
+                usedToday={usageUsedToday}
+                dailyLimit={usageDailyLimit}
+                hasCustomKey={hasCustomKey}
+                onClick={() => setIsApiKeyModalOpen(true)}
+              />
             )}
+
+            {/* User Menu */}
+            <div className="relative">
+              {isAuthenticated ? (
+                <>
+                  <button
+                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                    className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition duration-200"
+                    disabled={isSaving}
+                  >
+                    <User size={24} className="text-gray-600" />
+                  </button>
+                  {isUserDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                      <button 
+                        onClick={() => { setIsEditModalOpen(true); setIsUserDropdownOpen(false); }} 
+                        className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                      >
+                        <Settings size={16} className="mr-2" /> Edytuj dane podstawowe
+                      </button>
+                      <button 
+                        onClick={() => { setIsProfileModalOpen(true); setIsUserDropdownOpen(false); }} 
+                        className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                      >
+                        Profil
+                      </button>
+                      <button 
+                        onClick={() => { setIsApiKeyModalOpen(true); setIsUserDropdownOpen(false); }} 
+                        className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
+                      >
+                        <Key size={16} className="mr-2" /> Klucz API do Twojego AI
+                      </button>
+                      <div className="border-t border-gray-200"></div>
+                      <button 
+                        onClick={() => { handleLogout(); setIsUserDropdownOpen(false); }} 
+                        className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition duration-150"
+                      >
+                        Wyloguj
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button 
+                  onClick={handleLogin} 
+                  className="bg-blue-400 hover:bg-blue-500 text-white text-sm font-bold py-1 px-4 rounded-lg shadow-md transition duration-200"
+                >
+                  Zaloguj się
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -557,14 +685,7 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* 🆕 Usage Limit Warning */}
-        {isAuthenticated && !hasCustomKey && (
-          <UsageLimitWarning
-            usedToday={usageUsedToday}
-            dailyLimit={usageDailyLimit}
-            onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
-          />
-        )}
+        {/* 🆕 USUNIĘTO UsageLimitWarning - teraz tylko progress bar w headerze */}
 
         <Routes>
           <Route 
@@ -638,7 +759,6 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* 🆕 API Key Modal */}
       {isApiKeyModalOpen && (
         <ApiKeyModal
           isOpen={isApiKeyModalOpen}
