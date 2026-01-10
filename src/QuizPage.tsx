@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader, Send, Save, AlertCircle, Menu } from 'lucide-react';
+import { Loader, Send, Save, Menu } from 'lucide-react';
 import SaveSessionModal from './SaveSessionModal';
 import MaterialsSection from './MaterialsSection';
 import TestsSection from './TestsSection';
@@ -800,7 +800,7 @@ function QuizPage({
           </div>
         </div>
       )}
-      
+
       <div className="bg-white rounded-xl shadow-lg p-4 w-full mb-4">
         <div className="flex justify-between items-center mb-2 border-b pb-1">
           <h2 className="text-xl font-bold text-gray-800">Kartkówka na temat:</h2>
