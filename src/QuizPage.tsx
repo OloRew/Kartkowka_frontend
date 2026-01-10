@@ -385,7 +385,7 @@ function QuizPage({
 
     setIsGenerating(true);
     setGeneratedMaterials(null);
-    setGeneratedTests(null);
+    //setGeneratedTests(null);
     setGenerateError('');
 
     try {
@@ -737,38 +737,30 @@ function QuizPage({
 
   return (
     <>
-      {loadedSessionId && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded-lg flex items-start space-x-2">
-          <AlertCircle size={20} className="flex-shrink-0 text-blue-600 mt-1" />
-          <div>
-            <p className="font-bold text-sm text-blue-800">Wczytano zapisaną sesję</p>
-            <p className="text-xs text-blue-700">"{quizTopic}"</p>
-          </div>
-        </div>
-      )}
-
-      {/* 🆕 STATYSTYKI CUMULATIVE */}
+      {/* 🆕 STATYSTYKI CUMULATIVE - RESPONSIVE */}
       {cumulativePerformance && cumulativePerformance.totalTests > 0 && (
-        <div className="bg-blue-50 rounded-xl shadow-lg p-4 w-full mb-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-2">📊 Twoje statystyki</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-sm text-gray-600">Testy</p>
-              <p className="text-2xl font-bold text-blue-600">{cumulativePerformance.totalTests}</p>
+        <div className="bg-blue-50 rounded-xl shadow-lg p-3 sm:p-4 w-full mb-4">
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3">📊 Twoje statystyki</h3>
+          
+          {/* Główne statystyki - 2 kolumny na mobile, 4 na desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4">
+            <div className="bg-white rounded-lg p-2 sm:p-3">
+              <p className="text-xs sm:text-sm text-gray-600">Testy</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-600">{cumulativePerformance.totalTests}</p>
             </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-sm text-gray-600">Pytania</p>
-              <p className="text-2xl font-bold text-blue-600">{cumulativePerformance.totalQuestions}</p>
+            <div className="bg-white rounded-lg p-2 sm:p-3">
+              <p className="text-xs sm:text-sm text-gray-600">Pytania</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-600">{cumulativePerformance.totalQuestions}</p>
             </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-sm text-gray-600">Poprawne</p>
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-white rounded-lg p-2 sm:p-3">
+              <p className="text-xs sm:text-sm text-gray-600">Poprawne</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-600">
                 {cumulativePerformance.totalCorrectAnswers}
               </p>
             </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-sm text-gray-600">Accuracy</p>
-              <p className="text-2xl font-bold text-purple-600">
+            <div className="bg-white rounded-lg p-2 sm:p-3">
+              <p className="text-xs sm:text-sm text-gray-600">Accuracy</p>
+              <p className="text-xl sm:text-2xl font-bold text-purple-600">
                 {cumulativePerformance.overallAccuracy.toFixed(0)}%
               </p>
             </div>
@@ -776,30 +768,30 @@ function QuizPage({
           
           {/* Per-concept breakdown */}
           <div className="mt-3">
-            <p className="text-sm font-medium text-gray-700 mb-2">Per koncept:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Per koncept:</p>
+            <div className="grid grid-cols-1 gap-2">
               {Object.values(cumulativePerformance.conceptPerformance)
                 .sort((a, b) => a.accuracy - b.accuracy)
                 .slice(0, 6)
                 .map(concept => (
-                  <div key={concept.conceptId} className="bg-white rounded p-2 flex justify-between items-center">
-                    <span className="text-sm font-medium">{concept.conceptName}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${
+                  <div key={concept.conceptId} className="bg-white rounded p-2 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <span className="text-xs sm:text-sm font-medium truncate">{concept.conceptName}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-sm sm:text-base font-bold ${
                         concept.accuracy >= 70 ? 'text-green-600' :
                         concept.accuracy >= 50 ? 'text-yellow-600' :
                         'text-red-600'
                       }`}>
                         {concept.accuracy.toFixed(0)}%
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded ${
+                      <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
                         concept.suggestedDifficulty === 'basic' ? 'bg-green-100 text-green-700' :
                         concept.suggestedDifficulty === 'advanced' ? 'bg-purple-100 text-purple-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
                         {concept.suggestedDifficulty === 'basic' ? 'Podstawowy' :
-                         concept.suggestedDifficulty === 'advanced' ? 'Zaawansowany' :
-                         'Średni'}
+                        concept.suggestedDifficulty === 'advanced' ? 'Zaawansowany' :
+                        'Średni'}
                       </span>
                     </div>
                   </div>
@@ -808,7 +800,7 @@ function QuizPage({
           </div>
         </div>
       )}
-
+      
       <div className="bg-white rounded-xl shadow-lg p-4 w-full mb-4">
         <div className="flex justify-between items-center mb-2 border-b pb-1">
           <h2 className="text-xl font-bold text-gray-800">Kartkówka na temat:</h2>

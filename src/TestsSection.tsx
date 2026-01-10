@@ -71,19 +71,19 @@ const TestsSection: React.FC<TestsSectionProps> = ({
       </div>
 
       {isTestsVisible && (
-        <div className="p-3 space-y-6">
-          <div className="grid gap-6">
+        <div className="p-2 space-y-6">
+          <div className="grid gap-4">
             {generatedTests.questions.map((question: TestQuestion, index: number) => ( // DODANE TYPY
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">
+              <div key={index} className="border border-gray-200 rounded-lg p-2">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
                   Pytanie {index + 1}: {question.question}
                 </h3>
                 
-                <div className="space-y-3">
+                <div className="space-y-1">
                   {(['A', 'B', 'C', 'D'] as const).map((option) => (
                     <label
                       key={option}
-                      className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      className={`flex items-center p-1 rounded-lg border-2 cursor-pointer transition-all ${
                         userAnswers[index] === option
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
@@ -106,7 +106,7 @@ const TestsSection: React.FC<TestsSectionProps> = ({
                         className="hidden"
                         disabled={question.isCorrect !== undefined}
                       />
-                      <div className={`flex items-center justify-center w-6 h-6 rounded-full border-2 mr-3 ${
+                      <div className={`flex items-center justify-center w-5 h-5 rounded-full border-1 mr-1 ${
                         userAnswers[index] === option
                           ? 'border-blue-500 bg-blue-500 text-white'
                           : 'border-gray-300'
@@ -120,13 +120,13 @@ const TestsSection: React.FC<TestsSectionProps> = ({
                           : ''
                       }`}>
                         {userAnswers[index] === option ? (
-                          <Circle size={14} fill="currentColor" />
+                          <Circle size={12} fill="currentColor" />
                         ) : (
-                          <Circle size={14} />
+                          <Circle size={12} />
                         )}
                       </div>
-                      <span className="font-medium mr-2">{option})</span>
-                      <span className="text-gray-700">{question.options[option]}</span>
+                      <span className="font-medium mr-2 text-sm">{option})</span>
+                      <span className="text-gray-700 text-sm">{question.options[option]}</span>
                     </label>
                   ))}
                 </div>
