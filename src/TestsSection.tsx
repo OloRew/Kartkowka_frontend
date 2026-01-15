@@ -59,7 +59,7 @@ const TestsSection: React.FC<TestsSectionProps> = ({
         console.log('🆕 Nowy test - wyczyszczono odpowiedzi');
       }
     }
-  }, [generatedTests?.kartkowkaId]); // Reaguj na zmianę ID testu
+  }, [generatedTests?.kartkowkaId, generatedTests?.questions],); // Reaguj na zmianę ID testu
 
   const handleAnswerSelect = (questionIndex: number, answer: string) => {
     setUserAnswers((prev: Record<number, string>) => ({
