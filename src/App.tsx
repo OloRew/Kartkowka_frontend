@@ -12,6 +12,7 @@ import logo from './Logo_Kartkowka.png';
 import { GeneratedTests } from './TestsSection';
 import { useCurriculumData } from './hooks/useCurriculumData';
 import ApiKeyModal from './ApiKeyModal';
+import { CumulativePerformance } from './cumPerf';  // 🆕 IMPORT
 
 // ============================================
 // INTERFACES
@@ -167,6 +168,7 @@ const AppContent: React.FC = () => {
   const [loadedCurriculumTopicIds, setLoadedCurriculumTopicIds] = useState<string[]>([]);
   const [loadedTopicNames, setLoadedTopicNames] = useState<string[]>([]);
   const [loadedPrimaryConcepts, setLoadedPrimaryConcepts] = useState<string[]>([]);
+  const [loadedCumulativePerformance, setLoadedCumulativePerformance] = useState<CumulativePerformance | null>(null);  // 🆕 DODANE
 
   // API Key state
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
@@ -219,6 +221,15 @@ const AppContent: React.FC = () => {
               kartkowkaId: sessionData.id || sessionData.sessionId || testsData.quizSessionId || '',
               questions: testsData.questions || [],
               quizSessionId: testsData.quizSessionId || '',
+            });
+          }
+
+          // 🆕 WCZYTAJ CUMULATIVE PERFORMANCE
+          if (sessionData.cumulativePerformance) {
+            setLoadedCumulativePerformance(sessionData.cumulativePerformance);
+            console.log('📊 Wczytano cumulative z sesji:', {
+              totalTests: sessionData.cumulativePerformance.totalTests,
+              concepts: Object.keys(sessionData.cumulativePerformance.conceptPerformance || {}).length
             });
           }
           
@@ -292,6 +303,7 @@ const AppContent: React.FC = () => {
         setLoadedTopic('');
         setLoadedMaterials(null);
         setLoadedTests(null);
+        setLoadedCumulativePerformance(null);  // 🆕 WYCZYŚĆ
         setLoadedCurriculumId('');
         setLoadedCurriculumTopicIds([]);
         setLoadedTopicNames([]);
@@ -685,8 +697,6 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* 🆕 USUNIĘTO UsageLimitWarning - teraz tylko progress bar w headerze */}
-
         <Routes>
           <Route 
             path="/" 
@@ -711,6 +721,7 @@ const AppContent: React.FC = () => {
                   loadedPrimaryConcepts={loadedPrimaryConcepts}
                   curriculumData={curriculumData}
                   onSessionLoad={handleSessionDataUpdate}
+                  initialCumulativePerformance={loadedCumulativePerformance}  // 🆕 DODANE
                 />
               ) : (
                 <div className="text-center text-gray-600">

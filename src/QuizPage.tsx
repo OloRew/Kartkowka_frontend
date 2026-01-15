@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader, Send, Save, Menu } from 'lucide-react';
+import { Loader, Send, Save, Menu, ChevronDown, ChevronUp } from 'lucide-react';
 import SaveSessionModal from './SaveSessionModal';
 import MaterialsSection from './MaterialsSection';
 import TestsSection from './TestsSection';
@@ -168,21 +168,8 @@ function QuizPage({
     initialCumulativePerformance
   );
 
- // const findCurriculumTopicByConceptId = (
- //   conceptId: string,
- //   subject: string,
- //   studentClass: string
- // ): { topicName: string; topicId: string } | null => {
- //   if (!curriculumData) return null;
- //   const subjectData = curriculumData.subjects.find(s => s.subject === subject);
- //   if (!subjectData) return null;
- //   for (const topic of subjectData.topics) {
- //     if (topic.concepts.some(c => c.conceptId === conceptId)) {
- //       return { topicName: topic.topicName, topicId: topic.topicId };
- //     }
- //   }
- //   return null;
- // };
+  // 🆕 STATE dla zwijania statystyk - DOMYŚLNIE ZWINIĘTE
+  const [isStatsVisible, setIsStatsVisible] = useState<boolean>(false);
 
   // ============================================
   // EFFECTS
@@ -275,7 +262,6 @@ function QuizPage({
         conceptIds: selection.conceptIds,
       };
 
-      // 🆕 Dodaj cumulative jeśli istnieje
       if (cumulativePerformance) {
         payload.cumulativePerformance = cumulativePerformance;
       }
@@ -301,7 +287,6 @@ function QuizPage({
         onMessage(`✓ Temat "${selection.displayText}" zapisany`);
         setTimeout(() => onMessage(''), 3000);
       } else {
-        //const errorText = await response.text();
         onMessage('⚠️ Nie udało się automatycznie zapisać tematu');
         setTimeout(() => onMessage(''), 3000);
       }
@@ -347,7 +332,6 @@ function QuizPage({
         conceptIds: pendingSelection.conceptIds,
       };
 
-      // 🆕 Dodaj cumulative
       if (cumulativePerformance) {
         payload.cumulativePerformance = cumulativePerformance;
       }
@@ -385,7 +369,6 @@ function QuizPage({
 
     setIsGenerating(true);
     setGeneratedMaterials(null);
-    //setGeneratedTests(null);
     setGenerateError('');
 
     try {
@@ -476,7 +459,7 @@ function QuizPage({
         subject: quizSubject,
         topic: quizTopic,
         username,
-        kartkowkaId: generatedTests?.kartkowkaId || loadedSessionId,  // 🆕 Przekaż ID
+        kartkowkaId: generatedTests?.kartkowkaId || loadedSessionId,
         curriculumTopicIds: curriculumSelection?.curriculumTopicIds || [],
         conceptIds: curriculumSelection?.conceptIds || [],
       };
@@ -562,7 +545,6 @@ function QuizPage({
       if (response.ok) {
         const results = await response.json();
 
-        // Zaktualizuj pytania z wynikami
         const updatedQuestions = generatedTests.questions.map((q: any, i: number) => ({
           ...q,
           userAnswer: answers[i],
@@ -680,11 +662,10 @@ function QuizPage({
 
       if (generatedTests) {
         payload.tests = {
-          questions: generatedTests.questions,  // Tylko ostatni test
+          questions: generatedTests.questions,
         };
       }
 
-      // 🆕 DODAJ CUMULATIVE PERFORMANCE
       if (cumulativePerformance) {
         payload.cumulativePerformance = cumulativePerformance;
         console.log('💾 Zapisuję cumulative:', {
@@ -737,70 +718,6 @@ function QuizPage({
 
   return (
     <>
-      {/* 🆕 STATYSTYKI CUMULATIVE - RESPONSIVE */}
-      {cumulativePerformance && cumulativePerformance.totalTests > 0 && (
-        <div className="bg-blue-50 rounded-xl shadow-lg p-3 sm:p-4 w-full mb-4">
-          <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3">📊 Twoje statystyki</h3>
-          
-          {/* Główne statystyki - 2 kolumny na mobile, 4 na desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4">
-            <div className="bg-white rounded-lg p-2 sm:p-3">
-              <p className="text-xs sm:text-sm text-gray-600">Testy</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">{cumulativePerformance.totalTests}</p>
-            </div>
-            <div className="bg-white rounded-lg p-2 sm:p-3">
-              <p className="text-xs sm:text-sm text-gray-600">Pytania</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">{cumulativePerformance.totalQuestions}</p>
-            </div>
-            <div className="bg-white rounded-lg p-2 sm:p-3">
-              <p className="text-xs sm:text-sm text-gray-600">Poprawne</p>
-              <p className="text-xl sm:text-2xl font-bold text-green-600">
-                {cumulativePerformance.totalCorrectAnswers}
-              </p>
-            </div>
-            <div className="bg-white rounded-lg p-2 sm:p-3">
-              <p className="text-xs sm:text-sm text-gray-600">Accuracy</p>
-              <p className="text-xl sm:text-2xl font-bold text-purple-600">
-                {cumulativePerformance.overallAccuracy.toFixed(0)}%
-              </p>
-            </div>
-          </div>
-          
-          {/* Per-concept breakdown */}
-          <div className="mt-3">
-            <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Per koncept:</p>
-            <div className="grid grid-cols-1 gap-2">
-              {Object.values(cumulativePerformance.conceptPerformance)
-                .sort((a, b) => a.accuracy - b.accuracy)
-                .slice(0, 6)
-                .map(concept => (
-                  <div key={concept.conceptId} className="bg-white rounded p-2 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                    <span className="text-xs sm:text-sm font-medium truncate">{concept.conceptName}</span>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-sm sm:text-base font-bold ${
-                        concept.accuracy >= 70 ? 'text-green-600' :
-                        concept.accuracy >= 50 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>
-                        {concept.accuracy.toFixed(0)}%
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
-                        concept.suggestedDifficulty === 'basic' ? 'bg-green-100 text-green-700' :
-                        concept.suggestedDifficulty === 'advanced' ? 'bg-purple-100 text-purple-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {concept.suggestedDifficulty === 'basic' ? 'Podstawowy' :
-                        concept.suggestedDifficulty === 'advanced' ? 'Zaawansowany' :
-                        'Średni'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="bg-white rounded-xl shadow-lg p-4 w-full mb-4">
         <div className="flex justify-between items-center mb-2 border-b pb-1">
           <h2 className="text-xl font-bold text-gray-800">Kartkówka na temat:</h2>
@@ -921,6 +838,92 @@ function QuizPage({
           <div className="bg-red-100 text-red-700 p-2 rounded-lg text-xs mt-2">{generateError}</div>
         )}
       </div>
+
+      {/* 🆕 STATYSTYKI CUMULATIVE - ZWIJALNE, POD BLOKIEM GŁÓWNYM */}
+      {cumulativePerformance && cumulativePerformance.totalTests > 0 && (
+        <div className="bg-white rounded-xl shadow-lg w-full mb-4">
+          {/* Header - klikalne */}
+          <div
+            className="p-2 cursor-pointer flex justify-between items-center border-b"
+            onClick={() => setIsStatsVisible(!isStatsVisible)}
+          >
+            <h3 className="text-sm sm:text-base font-bold text-gray-800">📊 Twoje statystyki</h3>
+            {isStatsVisible ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </div>
+
+          {/* Content - zwijany */}
+          {isStatsVisible && (
+            <div className="p-2 sm:p-3">
+              {/* Główne statystyki - 2 kolumny na mobile, 4 na desktop */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2 mb-2">
+                <div className="bg-gray-50 rounded p-1.5 sm:p-2">
+                  <p className="text-xs text-gray-600">Testy</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-600">{cumulativePerformance.totalTests}</p>
+                </div>
+                <div className="bg-gray-50 rounded p-1.5 sm:p-2">
+                  <p className="text-xs text-gray-600">Pytania</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-600">{cumulativePerformance.totalQuestions}</p>
+                </div>
+                <div className="bg-gray-50 rounded p-1.5 sm:p-2">
+                  <p className="text-xs text-gray-600">Poprawne</p>
+                  <p className="text-lg sm:text-xl font-bold text-green-600">
+                    {cumulativePerformance.totalCorrectAnswers}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded p-1.5 sm:p-2">
+                  <p className="text-xs text-gray-600">Accuracy</p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-lg sm:text-xl font-bold text-purple-600">
+                      {cumulativePerformance.overallAccuracy.toFixed(0)}%
+                    </p>
+                    {/* 🆕 TYLKO STRZAŁKA - TREND OGÓLNY */}
+                    {cumulativePerformance.overallTrend !== 0 && (
+                      <span className={`text-base sm:text-lg font-bold ${
+                        cumulativePerformance.overallTrend > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {cumulativePerformance.overallTrend > 0 ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Per-concept breakdown */}
+              <div className="mt-2">
+                <p className="text-xs font-medium text-gray-700 mb-1">Per koncept:</p>
+                <div className="grid grid-cols-1 gap-1">
+                  {Object.values(cumulativePerformance.conceptPerformance)
+                    .sort((a, b) => a.accuracy - b.accuracy)
+                    .slice(0, 6)
+                    .map(concept => (
+                      <div key={concept.conceptId} className="bg-gray-50 rounded p-1.5 flex justify-between items-center gap-2">
+                        <span className="text-xs font-medium truncate flex-1">{concept.conceptName}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className={`text-sm font-bold ${
+                            concept.accuracy >= 70 ? 'text-green-600' :
+                            concept.accuracy >= 50 ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {concept.accuracy.toFixed(0)}%
+                          </span>
+                          
+                          {/* 🆕 TYLKO STRZAŁKA - TREND PER-CONCEPT */}
+                          {concept.trend !== 0 && (
+                            <span className={`text-sm font-bold ${
+                              concept.trend > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {concept.trend > 0 ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <MaterialsSection
         generatedMaterials={generatedMaterials}

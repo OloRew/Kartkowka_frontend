@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -45,6 +45,22 @@ const TestsSection: React.FC<TestsSectionProps> = ({
   const [isTestsVisible, setIsTestsVisible] = useState<boolean>(true);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
 
+  // 🆕 WYCZYŚĆ ODPOWIEDZI PRZY NOWYM TEŚCIE
+  useEffect(() => {
+    if (generatedTests?.questions) {
+      // Sprawdź czy to nowy test (pytania nie mają userAnswer ani isCorrect)
+      const isNewTest = generatedTests.questions.every(
+        q => q.userAnswer === undefined && q.isCorrect === undefined
+      );
+      
+      if (isNewTest) {
+        // Wyczyść stan odpowiedzi użytkownika
+        setUserAnswers({});
+        console.log('🆕 Nowy test - wyczyszczono odpowiedzi');
+      }
+    }
+  }, [generatedTests?.kartkowkaId]); // Reaguj na zmianę ID testu
+
   const handleAnswerSelect = (questionIndex: number, answer: string) => {
     setUserAnswers((prev: Record<number, string>) => ({
       ...prev,
@@ -73,7 +89,7 @@ const TestsSection: React.FC<TestsSectionProps> = ({
       {isTestsVisible && (
         <div className="p-2 space-y-6">
           <div className="grid gap-4">
-            {generatedTests.questions.map((question: TestQuestion, index: number) => ( // DODANE TYPY
+            {generatedTests.questions.map((question: TestQuestion, index: number) => (
               <div key={index} className="border border-gray-200 rounded-lg p-2">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">
                   Pytanie {index + 1}: {question.question}
@@ -177,9 +193,9 @@ const TestsSection: React.FC<TestsSectionProps> = ({
               )}
             </button>
 
-            {generatedTests.questions.some((q: TestQuestion) => q.isCorrect !== undefined) && ( // DODANE TYPY
+            {generatedTests.questions.some((q: TestQuestion) => q.isCorrect !== undefined) && (
               <div className="text-sm text-gray-600">
-                Wynik: {generatedTests.questions.filter((q: TestQuestion) => q.isCorrect).length}/ {/* DODANE TYPY */}
+                Wynik: {generatedTests.questions.filter((q: TestQuestion) => q.isCorrect).length}/
                 {generatedTests.questions.length} poprawnych odpowiedzi
               </div>
             )}

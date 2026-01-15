@@ -17,6 +17,7 @@ export interface CurriculumTopic {
   curriculumObjectives: string[];
   concepts: CurriculumConcept[];
   conceptNames: string[];
+  class?: string;
 }
 
 export interface CurriculumSubject {

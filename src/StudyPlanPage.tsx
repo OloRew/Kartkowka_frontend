@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader, BookOpen, Target, Lightbulb, Filter, X, FileText } from 'lucide-react';
-import { useCurriculumData, CurriculumSubject } from './hooks/useCurriculumData';  // ← POPRAWIONE (bez ../)
+import { useCurriculumData, CurriculumSubject } from './hooks/useCurriculumData';
 
 const StudyPlanPage: React.FC = () => {
   const { accounts } = useMsal();
@@ -10,28 +10,27 @@ const StudyPlanPage: React.FC = () => {
   const navigate = useNavigate();
   const username = accounts[0]?.username || '';
   
-  // 🆕 Pobierz klasę ucznia z profilu
-  const [studentClass, setStudentClass] = useState<string>('');
+  const [userClass, setUserClass] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>('');
   const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
   
-  // Hook do pobierania danych curriculum (czeka aż będzie klasa)
+  const effectiveClass = selectedClass || userClass || 'all';
+  
   const {
     curriculumData,
     loading,
     error,
     subjects,
     topicsBySubject,
-  } = useCurriculumData(studentClass);
+  } = useCurriculumData(effectiveClass);
 
   // Stany filtrowania
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // 🆕 STATE dla accordion (rozwijane topics)
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
 
-  // 🆕 Toggle topic expansion
   const toggleTopic = (topicId: string) => {
     setExpandedTopics(prev => {
       const newSet = new Set(prev);
@@ -44,7 +43,7 @@ const StudyPlanPage: React.FC = () => {
     });
   };
 
-  // 🆕 Pobierz dane ucznia (klasa)
+  // Pobierz dane ucznia (klasa)
   useEffect(() => {
     const fetchStudentData = async () => {
       if (!isAuthenticated || !username) {
@@ -68,18 +67,26 @@ const StudyPlanPage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          setStudentClass(data.className || '5'); // Domyślnie "5" jeśli brak
-          console.log('✅ [StudyPlan] Pobrano klasę ucznia:', data.className);
+          const studentClassName = data.className;
+          
+          if (studentClassName) {
+            setUserClass(studentClassName);
+            setSelectedClass(studentClassName);
+            console.log('✅ [StudyPlan] Pobrano klasę ucznia:', studentClassName);
+          } else {
+            console.warn('⚠️ [StudyPlan] Brak klasy w profilu');
+            setSelectedClass('all');
+          }
         } else if (response.status === 404) {
-          console.warn('⚠️ [StudyPlan] Brak danych ucznia, używam klasy domyślnej: 5');
-          setStudentClass('5'); // Domyślna klasa
+          console.warn('⚠️ [StudyPlan] Brak danych ucznia');
+          setSelectedClass('all');
         } else {
           console.error('❌ [StudyPlan] Błąd pobierania danych:', response.status);
-          setStudentClass('5');
+          setSelectedClass('all');
         }
       } catch (err) {
         console.error('❌ [StudyPlan] Błąd sieci:', err);
-        setStudentClass('5');
+        setSelectedClass('all');
       } finally {
         setLoadingProfile(false);
       }
@@ -88,8 +95,34 @@ const StudyPlanPage: React.FC = () => {
     fetchStudentData();
   }, [isAuthenticated, username]);
 
+  // 🆕 Funkcja do ekstrakcji dostępnych klas z curriculum
+  const getAvailableClasses = (): string[] => {
+    if (!curriculumData) return [];
+    
+    const classesSet = new Set<string>();
+    
+    curriculumData.subjects.forEach((subject: CurriculumSubject) => {
+      subject.topics.forEach(topic => {
+        if (topic.class) {
+          classesSet.add(topic.class);
+        }
+      });
+    });
+    
+    // Sortuj numerycznie
+    return Array.from(classesSet).sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (isNaN(numA) || isNaN(numB)) return a.localeCompare(b);
+      return numA - numB;
+    });
+  };
+
+  const availableClasses = getAvailableClasses();
+
   // Funkcja czyszczenia filtrów
   const clearFilters = () => {
+    setSelectedClass(userClass || 'all');
     setSelectedSubject('');
     setSelectedTopic('');
     setSearchQuery('');
@@ -102,11 +135,10 @@ const StudyPlanPage: React.FC = () => {
     topicId: string,
     conceptIds: string[]
   ) => {
-    // Przekaż parametry przez URL state
     navigate('/twoje-kartkowki', {
       state: {
         filterBy: 'curriculum',
-        class: studentClass,
+        class: effectiveClass === 'all' ? undefined : effectiveClass,
         subject: subject,
         topicName: topicName,
         topicId: topicId,
@@ -115,11 +147,19 @@ const StudyPlanPage: React.FC = () => {
     });
   };
 
-  // Filtrowanie danych
+  // 🆕 Filtrowanie danych z uwzględnieniem klasy
   const getFilteredData = (): CurriculumSubject[] => {
     if (!curriculumData) return [];
 
     let filtered: CurriculumSubject[] = curriculumData.subjects;
+
+    // 🔥 Filtruj po klasie (jeśli nie "all")
+    if (selectedClass && selectedClass !== 'all') {
+      filtered = filtered.map((subject: CurriculumSubject) => ({
+        ...subject,
+        topics: subject.topics.filter(topic => topic.class === selectedClass)
+      })).filter((s: CurriculumSubject) => s.topics.length > 0);
+    }
 
     // Filtruj po przedmiocie
     if (selectedSubject) {
@@ -147,7 +187,7 @@ const StudyPlanPage: React.FC = () => {
       })).filter((s: CurriculumSubject) => s.topics.length > 0);
     }
 
-    // 🆕 KLUCZOWE: Filtruj przedmioty i tematy - pokaż TYLKO jeśli mają co najmniej 1 concept
+    // Filtruj przedmioty i tematy - pokaż TYLKO jeśli mają co najmniej 1 concept
     filtered = filtered
       .map((subject: CurriculumSubject) => ({
         ...subject,
@@ -179,7 +219,6 @@ const StudyPlanPage: React.FC = () => {
     );
   }
 
-  // 🆕 Pokaż loader podczas ładowania profilu ucznia
   if (loadingProfile) {
     return (
       <div className="max-w-6xl mx-auto mt-6">
@@ -195,9 +234,16 @@ const StudyPlanPage: React.FC = () => {
     <div className="max-w-6xl mx-auto mt-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Plan Nauki</h1>
-        <p className="text-gray-600">
-          Twoja klasa: <span className="font-semibold">{studentClass}</span>
-        </p>
+        {userClass && (
+          <p className="text-gray-600">
+            Twoja klasa: <span className="font-semibold">{userClass}</span>
+            {selectedClass && selectedClass !== userClass && (
+              <span className="ml-2 text-sm text-blue-600">
+                (przeglądasz: {selectedClass === 'all' ? 'wszystkie klasy' : `klasa ${selectedClass}`})
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Sekcja Filtrów */}
@@ -207,7 +253,7 @@ const StudyPlanPage: React.FC = () => {
             <Filter size={20} className="mr-2" />
             Filtrowanie
           </h2>
-          {(selectedSubject || selectedTopic || searchQuery) && (
+          {(selectedClass !== (userClass || 'all') || selectedSubject || selectedTopic || searchQuery) && (
             <button
               onClick={clearFilters}
               className="text-sm text-red-600 hover:text-red-800 flex items-center"
@@ -218,7 +264,30 @@ const StudyPlanPage: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 🆕 Filtr: Klasa - DYNAMICZNA LISTA */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Klasa
+            </label>
+            <select
+              value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedSubject('');
+                setSelectedTopic('');
+              }}
+              className="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            >
+              <option value="all">Wszystkie klasy</option>
+              {availableClasses.map(classNum => (
+                <option key={classNum} value={classNum}>
+                  Klasa {classNum}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Filtr: Przedmiot */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -379,7 +448,7 @@ const StudyPlanPage: React.FC = () => {
                         {/* Rozwinięta zawartość */}
                         {isExpanded && (
                           <div className="p-4 bg-white border-t border-gray-200">
-                            {/* Cele Nauczania - scrollable 34 linie (~544px) */}
+                            {/* Cele Nauczania */}
                             {topic.curriculumObjectives.length > 0 && (
                               <div className="mb-4">
                                 <h4 className="text-sm font-semibold text-gray-700 flex items-center mb-2">
@@ -399,7 +468,7 @@ const StudyPlanPage: React.FC = () => {
                               </div>
                             )}
 
-                            {/* Pojęcia (Concepts) - scrollable 3 linie (~48px per concept) */}
+                            {/* Pojęcia (Concepts) */}
                             {topic.concepts.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-semibold text-gray-700 flex items-center mb-2">

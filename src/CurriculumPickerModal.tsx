@@ -8,8 +8,8 @@ import { useCurriculumData, CurriculumTopic } from './hooks/useCurriculumData';
 
 export interface CurriculumSelection {
   curriculumId: string;
-  curriculumTopicIds: string[];     // ← ZMIANA: array zamiast single
-  topicNames: string[];             // ← ZMIANA: array zamiast single
+  curriculumTopicIds: string[];
+  topicNames: string[];
   conceptIds: string[];
   conceptNames: string[];
   displayText: string;
@@ -21,7 +21,7 @@ interface CurriculumPickerModalProps {
   onSelect: (selection: CurriculumSelection) => void;
   studentClass: string;
   selectedSubject: string;
-  initialCurriculumTopicIds?: string[];    // ← ZMIANA: array
+  initialCurriculumTopicIds?: string[];
   initialConceptIds?: string[];
 }
 
@@ -35,17 +35,21 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
   onSelect,
   studentClass,
   selectedSubject,
-  initialCurriculumTopicIds = [],          // ← ZMIANA: array
+  initialCurriculumTopicIds = [],
   initialConceptIds = []
 }) => {
-  const { curriculumData, loading, error } = useCurriculumData(studentClass);
+  // 🔥 ZMIANA: Pobierz dane dla WSZYSTKICH klas
+  const { curriculumData, loading, error } = useCurriculumData('all');
   
-  // State - ZMIANA: Set<string> zamiast single string
+  // State
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
-  const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());  // ← ZMIANA
+  const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
   const [selectedConceptIds, setSelectedConceptIds] = useState<Set<string>>(new Set());
+  
+  // 🔥 NOWY STATE: Filtr klasy
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>(studentClass);
 
-  // useEffect do pre-select - AKTUALIZACJA dla array
+  // useEffect do pre-select
   useEffect(() => {
     if (isOpen && initialCurriculumTopicIds.length > 0) {
       setSelectedTopicIds(new Set(initialCurriculumTopicIds));
@@ -57,18 +61,53 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
     }
   }, [isOpen, initialCurriculumTopicIds, initialConceptIds]);
 
-  // Reset tylko przy zamknięciu przez X
+  // 🔥 NOWY useEffect: Reset filtru klasy przy otwarciu
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedClassFilter(studentClass);
+    }
+  }, [isOpen, studentClass]);
+
+  // Reset przy zamknięciu
   const handleClose = () => {
     setSelectedTopicIds(new Set());
     setSelectedConceptIds(new Set());
     setExpandedTopics(new Set());
+    setSelectedClassFilter(studentClass);
     onClose();
   };
 
   if (!isOpen) return null;
 
-  // Filtruj przedmiot
+  // 🔥 ZMIANA: Filtruj przedmiot
   const subjectData = curriculumData?.subjects.find(s => s.subject === selectedSubject);
+
+  // 🔥 NOWY: Filtruj tematy po klasie
+  const filteredTopics = subjectData?.topics.filter(topic => {
+    if (selectedClassFilter === 'all') return true;
+    return topic.class === selectedClassFilter;
+  }) || [];
+
+  // 🔥 NOWY: Funkcja do ekstrakcji dostępnych klas
+  const getAvailableClasses = (): string[] => {
+    if (!subjectData) return [];
+    
+    const classesSet = new Set<string>();
+    subjectData.topics.forEach(topic => {
+      if (topic.class) {
+        classesSet.add(topic.class);
+      }
+    });
+    
+    return Array.from(classesSet).sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (isNaN(numA) || isNaN(numB)) return a.localeCompare(b);
+      return numA - numB;
+    });
+  };
+
+  const availableClasses = getAvailableClasses();
 
   // Toggle rozwinięcia tematu
   const toggleTopic = (topicId: string) => {
@@ -81,20 +120,16 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
     setExpandedTopics(newExpanded);
   };
 
-  // Wybór całego tematu - MULTI-SELECT
+  // Wybór całego tematu
   const handleTopicSelect = (topic: CurriculumTopic) => {
     const newTopicIds = new Set(selectedTopicIds);
     const newConceptIds = new Set(selectedConceptIds);
     
     if (newTopicIds.has(topic.topicId)) {
-      // Odznacz topic
       newTopicIds.delete(topic.topicId);
-      // Odznacz wszystkie concepts z tego topicu
       topic.concepts.forEach(c => newConceptIds.delete(c.conceptId));
     } else {
-      // Zaznacz topic
       newTopicIds.add(topic.topicId);
-      // Zaznacz wszystkie concepts z tego topicu
       topic.concepts.forEach(c => newConceptIds.add(c.conceptId));
     }
     
@@ -110,7 +145,6 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
       newSelected.delete(conceptId);
     } else {
       newSelected.add(conceptId);
-      // Automatycznie dodaj topicId jeśli jeszcze nie dodany
       const newTopicIds = new Set(selectedTopicIds);
       if (!newTopicIds.has(topicId)) {
         newTopicIds.add(topicId);
@@ -121,21 +155,20 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
     setSelectedConceptIds(newSelected);
   };
 
-  // Potwierdź wybór - AKTUALIZACJA dla multi-topic
+  // Potwierdź wybór
   const handleConfirm = () => {
     if (selectedTopicIds.size === 0 || selectedConceptIds.size === 0) {
       alert('Wybierz przynajmniej jeden temat i concept');
       return;
     }
 
-    // Zbierz wszystkie wybrane topics
+    // Zbierz wszystkie wybrane topics (z WSZYSTKICH klas, nie tylko filtrowanych)
     const selectedTopics = subjectData?.topics.filter(t => 
       selectedTopicIds.has(t.topicId)
     ) || [];
 
     if (selectedTopics.length === 0) return;
 
-    // Zbierz concept names dla wybranych concepts
     const selectedConceptNames: string[] = [];
     selectedTopics.forEach(topic => {
       topic.concepts.forEach(concept => {
@@ -155,7 +188,7 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
     };
     
     onSelect(selection);
-    onClose();  // NIE resetuj - tylko zamknij
+    onClose();
   };
 
   return (
@@ -174,12 +207,34 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
           </button>
         </div>
 
-        {/* Info */}
-        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
-          <p className="text-sm text-blue-800">
-            <strong>Przedmiot:</strong> {selectedSubject} | <strong>Klasa:</strong> {studentClass}
-          </p>
-          <p className="text-xs text-blue-600 mt-1">
+        {/* Info + Filtr Klasy */}
+        <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-blue-800">
+              <strong>Przedmiot:</strong> {selectedSubject}
+            </p>
+            
+            {/* 🔥 NOWY: Dropdown filtru klasy */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-blue-800 font-medium">
+                Klasa:
+              </label>
+              <select
+                value={selectedClassFilter}
+                onChange={(e) => setSelectedClassFilter(e.target.value)}
+                className="text-sm border border-blue-300 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Wszystkie</option>
+                {availableClasses.map(classNum => (
+                  <option key={classNum} value={classNum}>
+                    Klasa {classNum}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <p className="text-xs text-blue-600">
             Możesz wybrać wiele tematów. Kliknij temat aby zaznaczyć wszystkie pojęcia, lub rozwiń i wybierz konkretne
           </p>
         </div>
@@ -204,9 +259,15 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
             </div>
           )}
 
-          {!loading && !error && subjectData && (
+          {!loading && !error && subjectData && filteredTopics.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              Brak tematów dla wybranej klasy
+            </div>
+          )}
+
+          {!loading && !error && filteredTopics.length > 0 && (
             <div className="space-y-2">
-              {subjectData.topics.map((topic) => {
+              {filteredTopics.map((topic) => {
                 const isExpanded = expandedTopics.has(topic.topicId);
                 const isTopicSelected = selectedTopicIds.has(topic.topicId);
                 const selectedCount = topic.concepts.filter(c => 
@@ -222,7 +283,6 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
                   >
                     {/* Topic Header */}
                     <div className="flex items-center p-3">
-                      {/* Expand/Collapse Button */}
                       <button
                         onClick={() => toggleTopic(topic.topicId)}
                         className="mr-2 text-gray-600 hover:text-gray-800"
@@ -234,7 +294,6 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
                         )}
                       </button>
 
-                      {/* Topic Checkbox */}
                       <button
                         onClick={() => handleTopicSelect(topic)}
                         className="mr-3 text-blue-600"
@@ -248,7 +307,6 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
                         )}
                       </button>
 
-                      {/* Topic Name */}
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-800">
                           {topic.topicName}
@@ -264,7 +322,7 @@ const CurriculumPickerModal: React.FC<CurriculumPickerModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Concepts List (when expanded) */}
+                    {/* Concepts List */}
                     {isExpanded && (
                       <div className="border-t border-gray-200 bg-white">
                         <div className="p-3 space-y-2">
