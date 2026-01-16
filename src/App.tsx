@@ -12,7 +12,7 @@ import logo from './Logo_Kartkowka.png';
 import { GeneratedTests } from './TestsSection';
 import { useCurriculumData } from './hooks/useCurriculumData';
 import ApiKeyModal from './ApiKeyModal';
-import { CumulativePerformance } from './cumPerf';  // 🆕 IMPORT
+import { CumulativePerformance } from './cumPerf';
 
 // ============================================
 // INTERFACES
@@ -127,6 +127,18 @@ const UsageProgressBar: React.FC<UsageProgressBarProps> = ({
 };
 
 // ============================================
+// 🔥 API UTILITY FUNCTIONS
+// ============================================
+
+const getApiBaseUrl = () => {
+  return process.env.NODE_ENV === 'development'
+    ? 'http://localhost:7071/api'
+    : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api';
+};
+
+const getFunctionKey = () => process.env.REACT_APP_FUNCTION_KEY as string;
+
+// ============================================
 // APP CONTENT COMPONENT
 // ============================================
 
@@ -168,13 +180,50 @@ const AppContent: React.FC = () => {
   const [loadedCurriculumTopicIds, setLoadedCurriculumTopicIds] = useState<string[]>([]);
   const [loadedTopicNames, setLoadedTopicNames] = useState<string[]>([]);
   const [loadedPrimaryConcepts, setLoadedPrimaryConcepts] = useState<string[]>([]);
-  const [loadedCumulativePerformance, setLoadedCumulativePerformance] = useState<CumulativePerformance | null>(null);  // 🆕 DODANE
+  const [loadedCumulativePerformance, setLoadedCumulativePerformance] = useState<CumulativePerformance | null>(null);
 
   // API Key state
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState<boolean>(false);
   const [hasCustomKey, setHasCustomKey] = useState<boolean>(false);
   const [usageUsedToday, setUsageUsedToday] = useState<number>(0);
   const [usageDailyLimit, setUsageDailyLimit] = useState<number>(5);
+
+  // Connection warming state
+  const [isConnectionWarmed, setIsConnectionWarmed] = useState<boolean>(false);
+
+  // ============================================
+  // 🔥 EFFECT - Connection Warming (Pre-fetch)
+  // ============================================
+  useEffect(() => {
+    const warmConnection = async () => {
+      const baseUrl = getApiBaseUrl();
+
+      try {
+        console.log('🔥 Rozgrzewanie połączenia z bazą danych...');
+        const startTime = Date.now();
+        
+        const response = await fetch(`${baseUrl}/healthCheck`, {
+          method: 'GET',
+          // Bez auth - endpoint jest ANONYMOUS
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const elapsed = Date.now() - startTime;
+          console.log(`✅ Połączenie rozgrzane w ${elapsed}ms`, data);
+          setIsConnectionWarmed(true);
+        } else {
+          console.warn('⚠️ Health check zwrócił błąd, ale to nie krytyczne');
+        }
+      } catch (error) {
+        console.warn('⚠️ Warming nie powiódł się (nie krytyczne):', error);
+        // Nie blokuj aplikacji - warming to optymalizacja, nie wymóg
+      }
+    };
+
+    // Wywołaj od razu przy montowaniu komponentu
+    warmConnection();
+  }, []); // Tylko raz przy starcie
 
   // ============================================
   // EFFECT - Load Session from localStorage
@@ -224,7 +273,6 @@ const AppContent: React.FC = () => {
             });
           }
 
-          // 🆕 WCZYTAJ CUMULATIVE PERFORMANCE
           if (sessionData.cumulativePerformance) {
             setLoadedCumulativePerformance(sessionData.cumulativePerformance);
             console.log('📊 Wczytano cumulative z sesji:', {
@@ -256,46 +304,20 @@ const AppContent: React.FC = () => {
   }, [isAuthenticated, location.pathname]);
 
   // ============================================
-  // EFFECT - Fetch Student Data
+  // 🚀 EFFECT - Fetch ALL User Data (Optimized)
   // ============================================
   useEffect(() => {
-    const fetchStudentData = async () => {
-      if (isAuthenticated && username) {
-        const functionKey = process.env.REACT_APP_FUNCTION_KEY as string;
-        const apiEndpoint = process.env.NODE_ENV === 'development'
-                ? `http://localhost:7071/api/getStudentData?username=${encodeURIComponent(username)}`
-                : `https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getStudentData?username=${encodeURIComponent(username)}`;
-        try {
-            const headers = { 'Content-Type': 'application/json', 'x-functions-key': functionKey };
-            const response = await fetch(apiEndpoint, { method: 'GET', headers });
-            if (response.ok) {
-              const data = await response.json();
-              setSchoolName(data.schoolName || '');
-              setClassName(data.className || '');
-              setDisplayName(data.name || username.split('@')[0]);
-              setStudentProfileData(data.profile || initialProfile);
-              setLikedMaterialIds(data.likedMaterialIds || []);
-              setMessage(''); 
-            } else if (response.status === 404) {
-              setMessage('Brak danych ucznia. Uzupełnij informacje.');
-              setSchoolName('');
-              setClassName('');
-              setStudentProfileData(initialProfile);
-              setLikedMaterialIds([]);
-            } else {
-              const errorText = await response.text();
-              setMessage(`Błąd podczas ładowania danych: ${errorText}`);
-            }
-        } catch (error) {
-          setMessage(`Wystąpił błąd sieci podczas ładowania danych: ${error}`);
-        }
-      } else {
+    const fetchAllUserData = async () => {
+      if (!isAuthenticated || !username) {
+        // Wyczyść dane przy wylogowaniu
         setSchoolName('');
         setClassName('');
         setDisplayName('');
         setStudentProfileData(initialProfile);
         setLikedMaterialIds([]);
-        setMessage('');
+        setHasCustomKey(false);
+        setUsageUsedToday(0);
+        setUsageDailyLimit(5);
         setIsEditModalOpen(false);
         setIsProfileModalOpen(false);
         setLoadedSessionId('');
@@ -303,72 +325,103 @@ const AppContent: React.FC = () => {
         setLoadedTopic('');
         setLoadedMaterials(null);
         setLoadedTests(null);
-        setLoadedCumulativePerformance(null);  // 🆕 WYCZYŚĆ
+        setLoadedCumulativePerformance(null);
         setLoadedCurriculumId('');
         setLoadedCurriculumTopicIds([]);
         setLoadedTopicNames([]);
         setLoadedPrimaryConcepts([]);
+        setMessage('');
+        return;
       }
-    };
-    fetchStudentData();
-  }, [isAuthenticated, username, accounts]);
-
-  // EFFECT - Fetch API Key Status
-  useEffect(() => {
-    const fetchApiKeyStatus = async () => {
-      if (!isAuthenticated || !username) return;
 
       try {
-        const apiEndpoint = process.env.NODE_ENV === 'development'
-          ? 'http://localhost:7071/api/updateApiKey'
-          : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/updateApiKey';
+        console.log('📥 Pobieranie wszystkich danych użytkownika...');
+        const startTime = Date.now();
+        const functionKey = getFunctionKey();
+        const baseUrl = getApiBaseUrl();
 
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string,
-          },
-          body: JSON.stringify({
-            username,
-            action: 'get'
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setHasCustomKey(data.hasCustomKey || false);
-          
-          const usageEndpoint = process.env.NODE_ENV === 'development'
-            ? 'http://localhost:7071/api/getUsageStatus'
-            : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/getUsageStatus';
-
-          const usageResponse = await fetch(`${usageEndpoint}?username=${encodeURIComponent(username)}`, {
+        // 🚀 Równoległe zapytania - wszystko naraz dla maksymalnej szybkości
+        const [studentResponse, apiKeyResponse, usageResponse] = await Promise.all([
+          fetch(`${baseUrl}/getStudentData?username=${encodeURIComponent(username)}`, {
             method: 'GET',
-            headers: {
-              'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string,
+            headers: { 'x-functions-key': functionKey }
+          }),
+          
+          fetch(`${baseUrl}/updateApiKey`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-functions-key': functionKey 
             },
-          });
+            body: JSON.stringify({ username, action: 'get' })
+          }),
+          
+          fetch(`${baseUrl}/getUsageStatus?username=${encodeURIComponent(username)}`, {
+            method: 'GET',
+            headers: { 'x-functions-key': functionKey }
+          })
+        ]);
 
-          if (usageResponse.ok) {
-            const usageData = await usageResponse.json();
-            setUsageUsedToday(usageData.used_today || 0);
-            setUsageDailyLimit(usageData.daily_limit || 5);
-          }
+        // Przetwarzanie odpowiedzi - Student Data
+        if (studentResponse.ok) {
+          const studentData = await studentResponse.json();
+          setSchoolName(studentData.schoolName || '');
+          setClassName(studentData.className || '');
+          setDisplayName(studentData.name || username.split('@')[0]);
+          setStudentProfileData(studentData.profile || initialProfile);
+          setLikedMaterialIds(studentData.likedMaterialIds || []);
+          console.log('✅ Dane ucznia załadowane');
+        } else if (studentResponse.status === 404) {
+          setMessage('Brak danych ucznia. Uzupełnij informacje.');
+          setSchoolName('');
+          setClassName('');
+          setStudentProfileData(initialProfile);
+          setLikedMaterialIds([]);
+        } else {
+          const errorText = await studentResponse.text();
+          console.error('❌ Błąd pobierania danych ucznia:', errorText);
         }
+
+        // Przetwarzanie odpowiedzi - API Key Status
+        if (apiKeyResponse.ok) {
+          const apiKeyData = await apiKeyResponse.json();
+          setHasCustomKey(apiKeyData.hasCustomKey || false);
+          console.log('✅ Status API key załadowany');
+        }
+
+        // Przetwarzanie odpowiedzi - Usage Status
+        if (usageResponse.ok) {
+          const usageData = await usageResponse.json();
+          setUsageUsedToday(usageData.used_today || 0);
+          setUsageDailyLimit(usageData.daily_limit || 5);
+          console.log('✅ Status wykorzystania załadowany');
+        }
+
+        const elapsed = Date.now() - startTime;
+        console.log(`✅ Wszystkie dane użytkownika pobrane w ${elapsed}ms`);
+
       } catch (error) {
-        console.error('Błąd pobierania statusu API key:', error);
+        console.error('❌ Błąd pobierania danych użytkownika:', error);
+        setMessage('Wystąpił błąd podczas ładowania danych');
       }
     };
 
-    fetchApiKeyStatus();
-  }, [isAuthenticated, username]);
+    fetchAllUserData();
+  }, [isAuthenticated, username]); // Tylko gdy zmieni się stan logowania
 
   // ============================================
   // HANDLERS - Auth
   // ============================================
   const handleLogin = () => instance.loginRedirect({ scopes: ['openid', 'profile', 'email'] });
   const handleLogout = () => instance.logoutRedirect();
+
+  // 🔥 Prefetch przy hover na przycisku logowania
+  const handleLoginHover = () => {
+    if (!isConnectionWarmed) {
+      const baseUrl = getApiBaseUrl();
+      fetch(`${baseUrl}/healthCheck`).catch(() => {});
+    }
+  };
 
   // ============================================
   // HANDLERS - Student Data
@@ -383,9 +436,7 @@ const AppContent: React.FC = () => {
     setMessage('Zapisywanie danych...');
     
     try {
-      const baseUrl = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:7071/api/saveStudentData'
-        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/saveStudentData';
+      const baseUrl = getApiBaseUrl();
         
       const dataToSend = {
         username,
@@ -396,11 +447,11 @@ const AppContent: React.FC = () => {
         likedMaterialIds: payload.likedMaterialIds ?? likedMaterialIds,
       };
       
-      const response = await fetch(baseUrl, { 
+      const response = await fetch(`${baseUrl}/saveStudentData`, { 
         method: 'POST', 
         headers: { 
           'Content-Type': 'application/json', 
-          'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string 
+          'x-functions-key': getFunctionKey()
         }, 
         body: JSON.stringify(dataToSend) 
       });
@@ -442,15 +493,13 @@ const AppContent: React.FC = () => {
         setLikedMaterialIds(likedMaterialIds.filter(id => !materialIds.includes(id))); 
       }
       
-      const apiEndpoint = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:7071/api/materialUserFeedback'
-        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/materialUserFeedback';
+      const baseUrl = getApiBaseUrl();
         
-      const response = await fetch(apiEndpoint, { 
+      const response = await fetch(`${baseUrl}/materialUserFeedback`, { 
         method: 'POST', 
         headers: { 
           'Content-Type': 'application/json', 
-          'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string 
+          'x-functions-key': getFunctionKey()
         }, 
         body: JSON.stringify({ 
           username, 
@@ -488,15 +537,13 @@ const AppContent: React.FC = () => {
     if (!username) return;
 
     try {
-      const apiEndpoint = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:7071/api/updateApiKey'
-        : 'https://kartkowkafunc-etaeawfubqcefcah.westeurope-01.azurewebsites.net/api/updateApiKey';
+      const baseUrl = getApiBaseUrl();
 
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(`${baseUrl}/updateApiKey`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-functions-key': process.env.REACT_APP_FUNCTION_KEY as string,
+          'x-functions-key': getFunctionKey(),
         },
         body: JSON.stringify({
           username,
@@ -611,9 +658,9 @@ const AppContent: React.FC = () => {
             <img src={logo} alt="Logo Kartkówka" className="h-10" />
           </div>
 
-          {/* 🆕 Right side: Progress Bar + User Menu */}
+          {/* Right side: Progress Bar + User Menu */}
           <div className="flex items-center gap-2">
-            {/* 🆕 Usage Progress Bar */}
+            {/* Usage Progress Bar */}
             {isAuthenticated && (
               <UsageProgressBar
                 usedToday={usageUsedToday}
@@ -666,7 +713,8 @@ const AppContent: React.FC = () => {
                 </>
               ) : (
                 <button 
-                  onClick={handleLogin} 
+                  onClick={handleLogin}
+                  onMouseEnter={handleLoginHover}
                   className="bg-blue-400 hover:bg-blue-500 text-white text-sm font-bold py-1 px-4 rounded-lg shadow-md transition duration-200"
                 >
                   Zaloguj się
@@ -721,7 +769,7 @@ const AppContent: React.FC = () => {
                   loadedPrimaryConcepts={loadedPrimaryConcepts}
                   curriculumData={curriculumData}
                   onSessionLoad={handleSessionDataUpdate}
-                  initialCumulativePerformance={loadedCumulativePerformance}  // 🆕 DODANE
+                  initialCumulativePerformance={loadedCumulativePerformance}
                 />
               ) : (
                 <div className="text-center text-gray-600">
