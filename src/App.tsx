@@ -308,6 +308,7 @@ const AppContent: React.FC = () => {
   // ============================================
   useEffect(() => {
     const fetchAllUserData = async () => {
+      const start = performance.now();
       if (!isAuthenticated || !username) {
         // Wyczyść dane przy wylogowaniu
         setSchoolName('');
@@ -333,6 +334,7 @@ const AppContent: React.FC = () => {
         setMessage('');
         return;
       }
+      
 
       try {
         console.log('📥 Pobieranie wszystkich danych użytkownika...');
@@ -399,6 +401,14 @@ const AppContent: React.FC = () => {
 
         const elapsed = Date.now() - startTime;
         console.log(`✅ Wszystkie dane użytkownika pobrane w ${elapsed}ms`);
+
+        
+
+        alert(`Czas: ${(performance.now() - start).toFixed(0)}ms`);
+
+
+
+
 
       } catch (error) {
         console.error('❌ Błąd pobierania danych użytkownika:', error);
