@@ -309,6 +309,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const fetchAllUserData = async () => {
       const start = performance.now();
+      
       if (!isAuthenticated || !username) {
         // Wyczyść dane przy wylogowaniu
         setSchoolName('');
@@ -334,21 +335,22 @@ const AppContent: React.FC = () => {
         setMessage('');
         return;
       }
-      
+
 
       try {
-        console.log('📥 Pobieranie wszystkich danych użytkownika...');
-        const startTime = Date.now();
+        console.log('📥 START');
+        const t_start = performance.now();
         const functionKey = getFunctionKey();
         const baseUrl = getApiBaseUrl();
 
-        // 🚀 Równoległe zapytania - wszystko naraz dla maksymalnej szybkości
+        console.log(`⏱️ Przygotowanie: ${(performance.now() - t_start).toFixed(0)}ms`);
+
+        const t_fetch = performance.now();
         const [studentResponse, apiKeyResponse, usageResponse] = await Promise.all([
           fetch(`${baseUrl}/getStudentData?username=${encodeURIComponent(username)}`, {
             method: 'GET',
             headers: { 'x-functions-key': functionKey }
-          }),
-          
+          }), 
           fetch(`${baseUrl}/updateApiKey`, {
             method: 'POST',
             headers: { 
@@ -357,12 +359,13 @@ const AppContent: React.FC = () => {
             },
             body: JSON.stringify({ username, action: 'get' })
           }),
-          
           fetch(`${baseUrl}/getUsageStatus?username=${encodeURIComponent(username)}`, {
             method: 'GET',
             headers: { 'x-functions-key': functionKey }
           })
         ]);
+        
+        console.log(`⏱️ Requesty (Promise.all): ${(performance.now() - t_fetch).toFixed(0)}ms`);
 
         // Przetwarzanie odpowiedzi - Student Data
         if (studentResponse.ok) {
@@ -399,14 +402,10 @@ const AppContent: React.FC = () => {
           console.log('✅ Status wykorzystania załadowany');
         }
 
-        const elapsed = Date.now() - startTime;
-        console.log(`✅ Wszystkie dane użytkownika pobrane w ${elapsed}ms`);
-
-        
-
+        console.log(`⏱️ CAŁKOWITY CZAS: ${(performance.now() - start).toFixed(0)}ms`);
         alert(`Czas: ${(performance.now() - start).toFixed(0)}ms`);
 
-
+    
 
 
 
@@ -417,7 +416,12 @@ const AppContent: React.FC = () => {
     };
 
     fetchAllUserData();
-  }, [isAuthenticated, username]); // Tylko gdy zmieni się stan logowania
+  }, [isAuthenticated, username]);
+
+
+
+
+
 
   // ============================================
   // HANDLERS - Auth
