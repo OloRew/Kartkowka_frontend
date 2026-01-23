@@ -154,6 +154,7 @@ const AppContent: React.FC = () => {
   const [displayName, setDisplayName] = useState(accounts[0]?.name || username);
   const [schoolName, setSchoolName] = useState<string>('');
   const [className, setClassName] = useState<string>('');
+  const [isLoadingUserData, setIsLoadingUserData] = useState<boolean>(false); // 🆕 DODANE
   
   const { curriculumData } = useCurriculumData(className);
   
@@ -204,7 +205,6 @@ const AppContent: React.FC = () => {
         
         const response = await fetch(`${baseUrl}/healthCheck`, {
           method: 'GET',
-          // Bez auth - endpoint jest ANONYMOUS
         });
 
         if (response.ok) {
@@ -217,13 +217,11 @@ const AppContent: React.FC = () => {
         }
       } catch (error) {
         console.warn('⚠️ Warming nie powiódł się (nie krytyczne):', error);
-        // Nie blokuj aplikacji - warming to optymalizacja, nie wymóg
       }
     };
 
-    // Wywołaj od razu przy montowaniu komponentu
     warmConnection();
-  }, []); // Tylko raz przy starcie
+  }, []);
 
   // ============================================
   // EFFECT - Load Session from localStorage
@@ -275,10 +273,6 @@ const AppContent: React.FC = () => {
 
           if (sessionData.cumulativePerformance) {
             setLoadedCumulativePerformance(sessionData.cumulativePerformance);
-            console.log('📊 Wczytano cumulative z sesji:', {
-              totalTests: sessionData.cumulativePerformance.totalTests,
-              concepts: Object.keys(sessionData.cumulativePerformance.conceptPerformance || {}).length
-            });
           }
           
           setMessage(`Wczytano sesję: ${sessionData.sessionName || 'Bez nazwy'}`);
@@ -308,8 +302,6 @@ const AppContent: React.FC = () => {
   // ============================================
   useEffect(() => {
     const fetchAllUserData = async () => {
-      const start = performance.now();
-      
       if (!isAuthenticated || !username) {
         // Wyczyść dane przy wylogowaniu
         setSchoolName('');
@@ -333,19 +325,17 @@ const AppContent: React.FC = () => {
         setLoadedTopicNames([]);
         setLoadedPrimaryConcepts([]);
         setMessage('');
+        setIsLoadingUserData(false); // 🆕
         return;
       }
 
-
       try {
+        setIsLoadingUserData(true); // 🆕 START ładowania
         console.log('📥 START');
-        const t_start = performance.now();
+        const t_fetch = performance.now();
         const functionKey = getFunctionKey();
         const baseUrl = getApiBaseUrl();
 
-        console.log(`⏱️ Przygotowanie: ${(performance.now() - t_start).toFixed(0)}ms`);
-
-        const t_fetch = performance.now();
         const [studentResponse, apiKeyResponse, usageResponse] = await Promise.all([
           fetch(`${baseUrl}/getStudentData?username=${encodeURIComponent(username)}`, {
             method: 'GET',
@@ -364,9 +354,7 @@ const AppContent: React.FC = () => {
             headers: { 'x-functions-key': functionKey }
           })
         ]);
-        
         console.log(`⏱️ Requesty (Promise.all): ${(performance.now() - t_fetch).toFixed(0)}ms`);
-
         // Przetwarzanie odpowiedzi - Student Data
         if (studentResponse.ok) {
           const studentData = await studentResponse.json();
@@ -382,16 +370,12 @@ const AppContent: React.FC = () => {
           setClassName('');
           setStudentProfileData(initialProfile);
           setLikedMaterialIds([]);
-        } else {
-          const errorText = await studentResponse.text();
-          console.error('❌ Błąd pobierania danych ucznia:', errorText);
         }
 
         // Przetwarzanie odpowiedzi - API Key Status
         if (apiKeyResponse.ok) {
           const apiKeyData = await apiKeyResponse.json();
           setHasCustomKey(apiKeyData.hasCustomKey || false);
-          console.log('✅ Status API key załadowany');
         }
 
         // Przetwarzanie odpowiedzi - Usage Status
@@ -399,29 +383,18 @@ const AppContent: React.FC = () => {
           const usageData = await usageResponse.json();
           setUsageUsedToday(usageData.used_today || 0);
           setUsageDailyLimit(usageData.daily_limit || 5);
-          console.log('✅ Status wykorzystania załadowany');
         }
-
-        console.log(`⏱️ CAŁKOWITY CZAS: ${(performance.now() - start).toFixed(0)}ms`);
-        alert(`Czas: ${(performance.now() - start).toFixed(0)}ms`);
-
-    
-
-
 
       } catch (error) {
         console.error('❌ Błąd pobierania danych użytkownika:', error);
         setMessage('Wystąpił błąd podczas ładowania danych');
+      } finally {
+        setIsLoadingUserData(false); // 🆕 KONIEC ładowania
       }
     };
 
     fetchAllUserData();
   }, [isAuthenticated, username]);
-
-
-
-
-
 
   // ============================================
   // HANDLERS - Auth
@@ -429,7 +402,6 @@ const AppContent: React.FC = () => {
   const handleLogin = () => instance.loginRedirect({ scopes: ['openid', 'profile', 'email'] });
   const handleLogout = () => instance.logoutRedirect();
 
-  // 🔥 Prefetch przy hover na przycisku logowania
   const handleLoginHover = () => {
     if (!isConnectionWarmed) {
       const baseUrl = getApiBaseUrl();
@@ -546,7 +518,6 @@ const AppContent: React.FC = () => {
     handleSaveStudentData({ profile: profileData }); 
   };
 
-  // HANDLER - API Key Updated
   const handleApiKeyUpdated = async () => {
     if (!username) return;
 
@@ -575,9 +546,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // ============================================
-  // HANDLERS - Session Loading (from QuizPage)
-  // ============================================
   const handleSessionDataUpdate = (
     subject: string, 
     topic: string, 
@@ -593,7 +561,6 @@ const AppContent: React.FC = () => {
     setLoadedSessionId(sessionId);
   };
 
-  // Handler do zamykania hamburger menu po kliknięciu w link
   const handleLinkClick = () => {
     setIsHamburgerOpen(false);
   };
@@ -613,7 +580,6 @@ const AppContent: React.FC = () => {
                 className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition duration-200 flex items-center justify-center"
                 aria-label="Menu"
               >
-                {/* Animowany hamburger/X */}
                 <div className="w-6 h-5 flex flex-col justify-between">
                   <span
                     className={`block h-0.5 w-6 bg-gray-600 transition-all duration-300 ${
@@ -633,48 +599,29 @@ const AppContent: React.FC = () => {
                 </div>
               </button>
               
-              {/* Dropdown menu hamburgera */}
               {isHamburgerOpen && (
                 <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                  <Link
-                    to="/"
-                    onClick={handleLinkClick}
-                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                  >
+                  <Link to="/" onClick={handleLinkClick} className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                     Kartkówka
                   </Link>
-                  <Link
-                    to="/twoje-kartkowki"
-                    onClick={handleLinkClick}
-                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                  >
+                  <Link to="/twoje-kartkowki" onClick={handleLinkClick} className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                     Zapisane kartkówki
                   </Link>
-                  <Link
-                    to="/plan-nauki"
-                    onClick={handleLinkClick}
-                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                  >
+                  <Link to="/plan-nauki" onClick={handleLinkClick} className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                     Plan nauki i wyniki
                   </Link>
-                  <Link
-                    to="/o-nas"
-                    onClick={handleLinkClick}
-                    className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                  >
+                  <Link to="/o-nas" onClick={handleLinkClick} className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                     O Nas
                   </Link>
                 </div>
               )}
             </div>
 
-            {/* Logo */}
             <img src={logo} alt="Logo Kartkówka" className="h-10" />
           </div>
 
           {/* Right side: Progress Bar + User Menu */}
           <div className="flex items-center gap-2">
-            {/* Usage Progress Bar */}
             {isAuthenticated && (
               <UsageProgressBar
                 usedToday={usageUsedToday}
@@ -684,7 +631,6 @@ const AppContent: React.FC = () => {
               />
             )}
 
-            {/* User Menu */}
             <div className="relative">
               {isAuthenticated ? (
                 <>
@@ -697,29 +643,17 @@ const AppContent: React.FC = () => {
                   </button>
                   {isUserDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                      <button 
-                        onClick={() => { setIsEditModalOpen(true); setIsUserDropdownOpen(false); }} 
-                        className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                      >
+                      <button onClick={() => { setIsEditModalOpen(true); setIsUserDropdownOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                         <Settings size={16} className="mr-2" /> Edytuj dane podstawowe
                       </button>
-                      <button 
-                        onClick={() => { setIsProfileModalOpen(true); setIsUserDropdownOpen(false); }} 
-                        className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                      >
+                      <button onClick={() => { setIsProfileModalOpen(true); setIsUserDropdownOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                         Profil
                       </button>
-                      <button 
-                        onClick={() => { setIsApiKeyModalOpen(true); setIsUserDropdownOpen(false); }} 
-                        className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150"
-                      >
+                      <button onClick={() => { setIsApiKeyModalOpen(true); setIsUserDropdownOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
                         <Key size={16} className="mr-2" /> Klucz API do Twojego AI
                       </button>
                       <div className="border-t border-gray-200"></div>
-                      <button 
-                        onClick={() => { handleLogout(); setIsUserDropdownOpen(false); }} 
-                        className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition duration-150"
-                      >
+                      <button onClick={() => { handleLogout(); setIsUserDropdownOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition duration-150">
                         Wyloguj
                       </button>
                     </div>
@@ -739,12 +673,21 @@ const AppContent: React.FC = () => {
         </div>
       </header>
 
+      {/* 🆕 ZMODYFIKOWANY BANNER Z ANIMACJĄ */}
       {isAuthenticated && (
         <div className="max-w-6xl mx-auto w-full px-4 py-2 bg-white">
-          <p className="text-gray-700 text-sm">
-            Witaj <span className="font-semibold">{displayName || 'Użytkowniku'}</span>
-            {schoolName && <>, {schoolName}</>}
-            {className && <>, klasa {className}</>}
+          <p className="text-gray-700 text-sm flex items-center gap-2">
+            Witaj 
+            {isLoadingUserData ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader size={14} className="animate-spin text-blue-500" />
+                <span className="text-gray-400 italic">ładowanie...</span>
+              </span>
+            ) : (
+              <span className="font-semibold">{displayName || 'Użytkowniku'}</span>
+            )}
+            {!isLoadingUserData && schoolName && <>, {schoolName}</>}
+            {!isLoadingUserData && className && <>, klasa {className}</>}
           </p>
         </div>
       )}
