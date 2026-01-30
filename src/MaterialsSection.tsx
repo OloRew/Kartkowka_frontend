@@ -225,15 +225,16 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
   if (!generatedMaterials) return null;
 
   const renderFlashcards = (flashcardText: string) => {
-    if (!flashcardText) return <p>Brak fiszek.</p>;
+    if (!flashcardText) return <p>Brak fiszek1.</p>;
 
-    const regex = /\[Pytanie\s*\d+\]\s*([\s\S]*?)\s*\[Odpowiedź\s*\d+\]\s*([\s\S]*?)(?=\[Pytanie\s*\d+\]|$)/g;
+    //const regex = /\[Pytanie\s*\d+\]\s*([\s\S]*?)\s*\[Odpowiedź\s*\d+\]\s*([\s\S]*?)(?=\[Pytanie\s*\d+\]|$)/g;
+    const regex = /(?:\[Pytanie\s*\d+\]|\*\*Pytanie\s*\d+\*\*:?)\s*([\s\S]*?)\s*(?:\[Odpowiedź\s*\d+\]|\*\*Odpowiedź\s*\d+\*\*:?)\s*([\s\S]*?)(?=(?:\[Pytanie\s*\d+\]|\*\*Pytanie\s*\d+\*\*:?)|$)/g;
     const flashcardsArray: { term: string; definition: string }[] = [];
     let match;
     while ((match = regex.exec(flashcardText)) !== null) {
       flashcardsArray.push({ term: match[1].trim(), definition: match[2].trim() });
     }
-    if (flashcardsArray.length === 0) return <p>Brak fiszek.</p>;
+    if (flashcardsArray.length === 0) return <p>Brak fiszek2.</p>;
 
     return (
       <div className="flex flex-wrap gap-4 p-4">
